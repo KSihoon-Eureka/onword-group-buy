@@ -1,170 +1,268 @@
-# 2-Day Sprint Plan
+# Onword Group Buy — Sprint Plan
 
+> Phase-based execution. **Timeline: as fast as parallel sessions allow** (no fixed days).
 > 살아있는 문서. 매 작업 완료 시 체크박스 업데이트.
-> 변경 시 commit + push 필수.
+> 마지막 업데이트: 2026-05-13 (sprint 2 — auth, multi-store, hybrid menu, dashboard-first)
 
-**시작:** 2025-05-13
-**종료:** 2025-05-15
-**개발 형태:** 파트너 1명 + AI 에이전트 4-6 병렬
-
-**레퍼런스 흡수 효과:**
-- 디자인 시스템 (Sidebar/BottomNav/AgentStepBlock) 즉시 완성 → 4-6시간 절약
-- 에이전트 loop 패턴 (`sendMessageToAgentStream`) Claude SDK로 포팅 완료 → 2-3시간 절약
-- Should 항목 일부를 Must로 승격 가능
+**개발 형태:** Sihoon (1인) + Claude Code 4-6 병렬 세션 (Boris Cherny 패턴 — `AI_DOCS/claude-code-workflow.md`)
 
 ---
 
-## Day 0 — 부트스트랩 (3시간, 오늘)
+## 완료됨
 
-레퍼런스 흡수로 시간 단축됨 (4h → 3h).
-
-- [x] **0.1** 디렉토리 구조 + 핵심 파일 (CLAUDE.md, AI_DOCS, types, orchestrator, UI)
-- [x] **0.1b** Agent tool 6개 스켈레톤 + 슈미트 fixture (Part C 추가)
-- [x] **0.1c** API route (apps/dashboard/app/api/agent/run/route.ts)
-- [x] **0.1d** 모든 패키지 package.json + tsconfig
-- [x] **0.1e** Next.js 설정 (layout, tailwind, postcss, globals.css)
-- [ ] **0.2** GitHub repo 생성 (onword-group-buy, private) + push
-- [ ] **0.3** pnpm install (Turborepo + 모든 의존성)
-- [ ] **0.4** Supabase 프로젝트 생성 + 마이그레이션 적용
-- [ ] **0.5** 환경변수 셋업 (.env.local):
-  - NEXT_PUBLIC_SUPABASE_URL
-  - NEXT_PUBLIC_SUPABASE_ANON_KEY
-  - SUPABASE_SERVICE_ROLE_KEY
-  - ANTHROPIC_API_KEY
-  - RESEND_API_KEY
-  - STORE_NAME, BRAND_NAME, STORE_SHORTNAME
-  - WHOLESALE_FROM_EMAIL, WHOLESALE_DEFAULT_RECIPIENT
-- [ ] **0.6** Supabase Storage 버킷 생성 ('assets', public)
-- [ ] **0.7** apps/dashboard 첫 빌드 통과 확인 (`pnpm dev` 실행)
-- [ ] **0.8** 첫 commit + push
+- [x] **0.1** 디렉토리 구조 + 핵심 파일 (CLAUDE.md, AI_DOCS, types, orchestrator, UI 스켈레톤)
+- [x] **0.2** Agent tool 6개 스켈레톤 + 슈미트 fixture
+- [x] **0.3** API route 스켈레톤
+- [x] **0.4** 모든 패키지 package.json + tsconfig
+- [x] **0.5** Next.js 설정 (layout, tailwind, postcss, globals.css)
+- [x] **0.6** ONBOARDING.md
+- [x] **0.7** AI_DOCS sprint 2 업데이트 (multi-store, auth, PIPA, 7-feature dashboard, saved flows, image crawl 분리, Step 10)
 
 ---
 
-## Day 1 — Builder Mode (8시간)
+## Phase A — Foundation (prereqs for everything)
 
-### 오전 (4시간) — 4 에이전트 병렬
+순차 작업. 다른 Phase 시작 전에 완료 필수.
 
-**Track A (Agent 1):** 상품 주문 웹 — 랜딩 페이지
-- [ ] **1A.1** apps/order-web Next.js 셋업
-- [ ] **1A.2** ProductCard 컴포넌트 (긴급배너, 가격 강조, 마감일)
-- [ ] **1A.3** 상품 목록 페이지 (active 상품만)
-- [ ] **1A.4** CountdownTimer 컴포넌트
-- 참조: AI_DOCS/dashboard-ui-patterns.md (디자인 토큰)
+- [ ] **A.1** Supabase 프로젝트 생성 (서울 region) + 환경변수 (.env.local)
+- [ ] **A.2** GitHub repo 생성 + `git push -u origin main`
+- [ ] **A.3** `supabase/migrations/0001_init.sql` 정리 (현재 5 tables만)
+- [ ] **A.4** `0002_multi_tenant.sql`:
+  - stores, store_members 테이블 생성
+  - 기존 5 tables에 store_id FK 추가
+  - 기본 RLS 활성화 + 4 action 정책 (SELECT/INSERT/UPDATE/DELETE)
+  - orders trigger (store_id 자동 복제)
+- [ ] **A.5** `0003_new_tables.sql`:
+  - saved_flows 테이블 + default flows trigger
+  - audit_log 테이블
+  - phone_access_log 테이블
+- [ ] **A.6** `0004_constraints.sql`:
+  - phone length check (= 4)
+  - phone_consent_at NOT NULL
+  - generated_assets supersede 컬럼 추가
+  - products.primary_image_url, archived_at 추가
+- [ ] **A.7** Storage bucket 생성 (`assets`, public)
+- [ ] **A.8** 첫 번째 사장님 user + store + store_members 수동 생성 (SQL)
+- [ ] **A.9** RLS cross-store leak 테스트 (다른 store의 user로 접근 → 차단 확인)
+- [ ] **A.10** pnpm install + Playwright chromium install
 
-**Track B (Agent 2):** 상품 주문 웹 — 주문 폼
-- [ ] **1B.1** 상품 상세 페이지 ([productId])
-- [ ] **1B.2** OrderForm 컴포넌트
-- [ ] **1B.3** Supabase insert + 재고 갱신 (trigger 자동)
-- [ ] **1B.4** 실시간 참여자 수 표시 (Realtime)
-
-**Track C (Agent 3):** Agent Tool — generate_announcement
-- [ ] **1C.1** packages/agent/tools/generate-announcement.ts
-- [ ] **1C.2** Claude API 호출 + AI_DOCS/kakao-text-format.md 템플릿 주입
-- [ ] **1C.3** TDD: 슈미트 베개커버 예시 통과
-- [ ] **1C.4** Stage 1, 3 모두 지원
-
-**Track D (Agent 4):** 대시보드 — NewProductView 폼
-- [ ] **1D.1** ProductRegisterForm 컴포넌트
-- [ ] **1D.2** 이미지 업로드 (Supabase Storage)
-- [ ] **1D.3** Submit → products insert → /api/agent/run(start_campaign)
-- [ ] **1D.4** Submit 후 Chat 탭으로 자동 전환
-
-### 오후 (4시간) — 통합 + 추가 Tool
-
-- [ ] **1.E** 4개 트랙 PR 리뷰 + 머지
-- [ ] **1.F** 통합 테스트 (상품 등록 → 주문 → 대시보드 표시)
-
-**Track E (Agent 5):** Agent Tool — crawl_naver_price
-- [ ] **1E.1** Playwright 설정 + Vercel serverless 호환
-- [ ] **1E.2** crawl-naver-price.ts 구현
-- [ ] **1E.3** Rate limit + UA rotation
-- [ ] **1E.4** Supabase Storage 업로드 (스크린샷)
-
-**Track F (Agent 6):** Agent Tool — get_orders + db helpers
-- [ ] **1F.1** get-orders.ts (anomaly detection)
-- [ ] **1F.2** packages/db/ Supabase wrapper
-- [ ] **1F.3** TDD
+> **위험 게이트**: A.9 통과 못 하면 Phase B 시작 금지. 멀티 매장 격리 안 되면 launch 불가.
 
 ---
 
-## Day 2 — Heavy Tools + 통합 + 배포 (8시간)
+## Phase B — Dashboard Skeleton (B.1-B.4 병렬 가능)
 
-### 오전 (4시간) — 무거운 Tool 3개
-
-**Track G (Agent 1):** Agent Tool — compose_poster
-- [ ] **2G.1** Sharp 셋업 + 한글 폰트 (Pretendard 또는 Noto Sans KR)
-- [ ] **2G.2** compose-poster.ts (슈미트 포스터 형식)
-- [ ] **2G.3** TDD: fixture 이미지로 800x950 PNG 출력 확인
-
-**Track H (Agent 2):** ChatView + Execution Trace
-- [ ] **2H.1** apps/dashboard/components/views/ChatView 완성
-- [ ] **2H.2** 메시지 입력 + 히스토리 표시
-- [ ] **2H.3** Execution Trace 패널 (AgentStepBlock 시퀀스)
-- [ ] **2H.4** Supabase Realtime 구독 (trace_steps)
-- [ ] **2H.5** 추천 액션 버튼 4개
-
-**Track I (Agent 3):** Agent Tool — notify_wholesaler + API route
-- [ ] **2I.1** Resend 셋업 + 이메일 템플릿
-- [ ] **2I.2** notify-wholesaler.ts
-- [ ] **2I.3** apps/dashboard/app/api/agent/run/route.ts (orchestrator 호출)
-- [ ] **2I.4** SSE 또는 단순 응답 (Realtime이 step 전달)
-
-### 오후 (4시간) — 남은 View + 통합 + 배포
-
-- [ ] **2.J** CampaignsView 완성 (ProductCard 그리드 + flow_stage)
-- [ ] **2.K** OrdersView 완성 (검색 + 픽업 처리)
-- [ ] **2.L** AssetsView 완성 (자산 목록 + 복사 버튼)
-- [ ] **2.M** E2E 테스트:
-  - 상품 등록 → start_campaign → 공고/포스터/네이버 자동 생성
-  - 주문 들어옴 → close_orders → 누락 검수
-  - notify_warehouse → 도매업자 이메일
-  - announce_pickup → 수령 안내
-- [ ] **2.N** Vercel 배포 (3개 앱 별도 도메인)
-- [ ] **2.O** 클라이언트 시연 영상 녹화
+- [ ] **B.1** `/login` 페이지 + Supabase Auth 클라이언트
+  - email + password 폼
+  - 에러 메시지 ("invalid credentials")
+  - 성공 시 `/` 리다이렉트
+- [ ] **B.2** Auth 미들웨어 (`apps/dashboard/middleware.ts`)
+  - 미인증 사용자 `/login` 리다이렉트
+  - 인증된 사용자 → store_members 조회 → active_store 설정
+- [ ] **B.3** 5-slot 사이드바 + Korean 라벨 (`packages/ui/Sidebar.tsx`)
+- [ ] **B.4** StoreSwitcher 컴포넌트 (`packages/ui/StoreSwitcher.tsx`)
+- [ ] **B.5** 각 메뉴의 empty placeholder ("곧 추가됨")
+- [ ] **B.6** 로그아웃 동작
+- [ ] **B.7** 다중 매장 멤버 시 `/select-store` 화면
 
 ---
 
-## Should — Must로 승격 (절약 시간 활용)
+## Phase C — Core Views (C.1-C.4 병렬 가능)
 
-레퍼런스 흡수로 절약된 6-9시간을 활용해 다음을 Must로:
-
-- [ ] **S.1** apps/lookup-web — 주문조회 웹 (카운터용)
-- [ ] **S.2** generate_pickup_table tool
-- [ ] **S.3** 모바일 BottomNav 완성 + 모바일 ChatView UX
+- [ ] **C.1** `ProductRegisterForm.tsx` (`/new` 페이지)
+  - 모든 필수 필드 입력
+  - "이미지 자동 가져오기" 버튼 (→ `crawl_naver_images` 호출)
+  - 6장 이미지 그리드, 선택 / 메인 지정
+  - 직접 업로드 fallback (Supabase Storage 직접)
+  - Submit → `products` insert → "공구 시작" 옵션 토스트
+- [ ] **C.2** `ChatView.tsx` (`/` 페이지, AI 비서)
+  - 메시지 input + history
+  - Empty state에 SavedFlows 렌더링
+  - 새 대화 버튼 (chat 초기화)
+- [ ] **C.3** `SavedFlows.tsx` (`packages/ui/`)
+  - 그리드 (run_count desc 정렬)
+  - 클릭 → input fill (자동 전송 안 함)
+  - 새 플로우 저장 버튼 + 모달
+  - 편집 / 삭제 메뉴
+- [ ] **C.4** `ExecutionTracePanel.tsx` (오른쪽 패널)
+  - `AgentStepBlock` 시퀀스
+  - Supabase Realtime 구독 (`trace:{traceId}`)
+- [ ] **C.5** API route `/api/agent/run` (orchestrator entry)
+  - 인증 확인 → store_id 추출
+  - agent_traces row 생성
+  - tool 호출 루프 (X3: 실패 시 중단)
+  - 결과 응답
 
 ---
 
-## Won't (이번 스프린트 제외)
+## Phase D — Agent Tools (TDD 강제, D.1-D.10 거의 모두 병렬)
 
-- 카카오 API 자동 전송 (텍스트 복사로 대체)
+각 tool은 독립. 한 워커가 하나씩.
+
+- [ ] **D.1** `generate_announcement` (Stage 1)
+  - Claude API + `AI_DOCS/kakao-text-format.md` §1 템플릿
+  - store config (leading_emoji, brand_name) 주입
+  - TDD: 슈미트 베개커버 fixture 통과
+- [ ] **D.2** `generate_announcement` (Stage 2 마감 임박)
+  - 단일 / 다중 상품 지원
+  - 형식 §2
+- [ ] **D.3** `generate_announcement` (Stage 3 수령 안내)
+  - 형식 §3
+  - 빈 결과 처리
+- [ ] **D.4** `generate_price_emphasis_text` (NEW)
+  - 100자 이내
+  - 형식 §4
+  - naverPrice 미존재 / 역전 시 에러
+- [ ] **D.5** `crawl_naver_images` (NEW — multi-image)
+  - `AI_DOCS/image-crawl.md` 참조
+  - max 6 images, 분류 (product/detail/lifestyle)
+  - rate limit + UA rotation
+  - Supabase Storage 업로드
+- [ ] **D.6** `crawl_naver_price` (분리됨)
+  - 가격 데이터 + 스크린샷
+  - 같은 rate limit 적용
+- [ ] **D.7** `compose_poster`
+  - Sharp + Pretendard 폰트
+  - 800×950 PNG
+  - store.primary_color / accent_color 사용
+- [ ] **D.8** `generate_pickup_table`
+  - SVG → Sharp 렌더링
+  - `AI_DOCS/pickup-table-design.md` 참조
+  - 동반 카톡 텍스트도 생성
+- [ ] **D.9** `get_orders` + db helpers
+  - anomaly detection (rules in `AI_DOCS/anomaly-rules.md` — 추후 작성)
+- [ ] **D.10** `notify_wholesaler`
+  - Resend API
+  - customer_phone 절대 제외 (PIPA)
+  - phone_access_log 'export' 기록
+
+---
+
+## Phase E — Dashboard Secondary Views (E.1-E.7 병렬)
+
+- [ ] **E.1** 공구 현황 (`/campaigns` or 기본 view)
+  - ProductCard 그리드
+  - flow_stage 8-stage progress dots
+  - 필터 (active / archived / 전체)
+- [ ] **E.2** 상품 상세 (`/p/[id]`)
+  - 7-feature action surface
+  - 각 액션 status 표시 (asset 존재 여부 + superseded 처리)
+  - AI 비서 (상품 컨텍스트 주입)
+  - 자산 목록 + 복사 버튼
+- [ ] **E.3** 주문 관리 (`/orders`)
+  - Empty state placeholder ("주문 데이터가 곧 추가됨")
+  - 구조는 미리 준비 (order-web 출시 시 즉시 활성)
+- [ ] **E.4** 자산 (`/assets`)
+  - 모든 generated_assets 목록 (superseded 제외 default)
+  - 타입별 필터, 상품별 그룹
+  - 복사 버튼 (텍스트), 다운로드 (이미지)
+- [ ] **E.5** AuditLogPanel (`/audit` 또는 ProductDetail 내)
+  - 시간 역순
+  - 매장 전체 또는 product별
+- [ ] **E.6** NotificationCenter (사이드바 🔔)
+  - 최근 audit_log 10건
+  - 새 주문 (Realtime, 미래 활성)
+  - tool 실패 알림
+- [ ] **E.7** SummaryCard (AI 비서 default landing)
+  - 오늘 마감 N / 신규 주문 N / 수령 가능 N / 마감 임박 N
+
+---
+
+## Phase F — Polish + Deploy
+
+- [ ] **F.1** Cron: `auto-no-show.ts` (매일 00:00)
+  - Supabase pg_cron 또는 Vercel Cron
+- [ ] **F.2** Cron: `pipa-retention.ts` (매일 00:00)
+  - phone 보유기간 만료 자동 NULL
+- [ ] **F.3** Privacy policy 페이지 (`/privacy`) — `AI_DOCS/pipa-compliance.md` 기반
+- [ ] **F.4** Vercel 프로젝트 2개 (dev + prod) 연결
+  - dev → dev Supabase + sandbox API keys
+  - prod → prod Supabase + 실서비스 API keys
+- [ ] **F.5** Brute-force 방어 (`/login` Cloudflare Turnstile 또는 Supabase rate limit)
+- [ ] **F.6** E2E test (Playwright)
+  - 로그인 → 상품 등록 → start_campaign → 공고 / 이미지 / 가격 / 포스터 생성
+  - 매장 스위처 동작
+  - PIPA 동의 미체크 시 폼 차단
+- [ ] **F.7** README + 사장님 가이드 (간단한 사용법 1페이지)
+
+---
+
+## Should (시간 남으면 P1 → P0 승격)
+
+- [ ] **S.1** `apps/order-web` 부활 (고객 주문 폼, mobile-first, senior-friendly)
+- [ ] **S.2** `apps/lookup-web` (카운터용 주문 조회)
+- [ ] **S.3** 모바일 dashboard 최적화
+- [ ] **S.4** AI가 자주 쓰는 명령 패턴 학습 → saved_flows 자동 제안
+
+---
+
+## Won't (이번 sprint 제외)
+
+- 카카오 API 자동 전송 (Won't 영구)
 - 결제 시스템
-- 회원가입/로그인
+- 사장님 셀프 가입 + 이메일 verification
+- 2FA
+- Magic-link 비밀번호 재설정
+- 직원 초대 (한 매장 다중 user)
 - 다국어
-- 다중 매장 (multi-tenant)
-- Stage 2 공고 (마감 임박)
-- 캘린더 위젯
+- 모바일 앱
+- Stage 4+ 카톡 템플릿 (배송 지연, 환불 등)
 
 ---
 
-## 일일 회고 체크포인트
+## Phase별 의존성
 
-### Day 1 종료 시
-- [ ] Must P0의 50% 이상 완료?
-- [ ] AI_DOCS에 추가할 학습 있나?
-- [ ] 내일 4개 Track 명확한가?
-- [ ] 막힌 부분 → 클라이언트 확인 필요?
+```
+A → B → C ↘
+         → D → E → F
+         ↗
+```
 
-### Day 2 종료 시
-- [ ] Must P0 100% 완료?
-- [ ] E2E 흐름 끊김 없이 동작?
-- [ ] Vercel 배포 완료?
-- [ ] 클라이언트가 *지금* 보면 만족할까?
+A는 모든 것의 prereq. B는 C 시작 가능. D는 C와 병렬 가능 (서로 인터페이스 분리). E는 D 일부 완료 후 (특히 tool들이 있어야 view에서 trigger 가능). F는 마지막.
+
+병렬 워커 배치 예시 (A 완료 후):
+- Worker 1: B (사이드바 + auth + 스위처)
+- Worker 2: C.1 (상품 등록)
+- Worker 3: C.2 + C.3 (ChatView + SavedFlows)
+- Worker 4: D.1 (generate_announcement Stage 1)
+- Worker 5: D.5 (image crawl)
+- Worker 6 (선택): D.7 (poster)
+
+Coordinator (Sihoon + 이 세션): PR 리뷰, AI_DOCS 업데이트, conflict 해결.
 
 ---
 
-## 에스컬레이션 트리거
+## 일일 회고
 
-- 클라이언트 요구사항 모호한 항목 발견 → Jinho에게 즉시
-- AI_DOCS와 실제 구현 충돌 → 멈추고 docs 업데이트 후 진행
-- Track 하나가 4시간 이상 막힘 → 다른 트랙으로 분리하거나 scope 축소
+### 매일 종료 시
+- [ ] Phase 진행도?
+- [ ] AI_DOCS에 추가할 학습?
+- [ ] 내일 Track 4-6개 명확한가?
+- [ ] 막힌 부분 → 코파운더 확인 필요?
+
+### 에스컬레이션 트리거
+- 클라이언트 요구사항 모호 → 즉시 멈춤 + 명시적 질문
+- AI_DOCS와 실제 구현 충돌 → 멈춤 + docs 업데이트 후 진행
+- Track 하나가 막힘 → 다른 트랙으로 분리하거나 scope 축소
 - 외부 API 작동 안 함 → fallback 명시, 사용자에게 표시
+- RLS 정책 누락 의심 → 즉시 멈춤, 보안 점검 우선
+
+---
+
+## 참조
+
+| 상황 | 문서 |
+|---|---|
+| Workflow 단계 구현 | `AI_DOCS/workflow-9-steps.md` |
+| 카카오 텍스트 생성 | `AI_DOCS/kakao-text-format.md` |
+| 네이버 크롤링 | `AI_DOCS/naver-crawl-strategy.md` |
+| 이미지 크롤 (multi) | `AI_DOCS/image-crawl.md` |
+| 포스터 합성 | `AI_DOCS/poster-composition.md` |
+| 수령 테이블 | `AI_DOCS/pickup-table-design.md` |
+| 데이터 모델 | `AI_DOCS/data-model.md` |
+| 멀티 매장 + auth + RLS | `AI_DOCS/multi-store.md` |
+| 저장된 플로우 | `AI_DOCS/saved-flows.md` |
+| PIPA 준수 | `AI_DOCS/pipa-compliance.md` |
+| 클라이언트 요구사항 | `AI_DOCS/client-requirements.md` |
+| UI 패턴 / 디자인 | `AI_DOCS/dashboard-ui-patterns.md` |
+| Claude Code 활용법 | `AI_DOCS/claude-code-workflow.md` |
