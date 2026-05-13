@@ -7,5 +7,6 @@
 
 export { cn } from './cn'
 export { Sidebar, type SidebarProps } from './Sidebar'
+export { StoreSwitcher, type StoreSwitcherProps } from './StoreSwitcher'
 export { BottomNav, type BottomNavProps } from './BottomNav'
 export { AgentStepBlock, type AgentStepBlockProps } from './AgentStepBlock'
