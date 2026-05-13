@@ -19,6 +19,10 @@
 레퍼런스 흡수로 시간 단축됨 (4h → 3h).
 
 - [x] **0.1** 디렉토리 구조 + 핵심 파일 (CLAUDE.md, AI_DOCS, types, orchestrator, UI)
+- [x] **0.1b** Agent tool 6개 스켈레톤 + 슈미트 fixture (Part C 추가)
+- [x] **0.1c** API route (apps/dashboard/app/api/agent/run/route.ts)
+- [x] **0.1d** 모든 패키지 package.json + tsconfig
+- [x] **0.1e** Next.js 설정 (layout, tailwind, postcss, globals.css)
 - [ ] **0.2** GitHub repo 생성 (onword-group-buy, private) + push
 - [ ] **0.3** pnpm install (Turborepo + 모든 의존성)
 - [ ] **0.4** Supabase 프로젝트 생성 + 마이그레이션 적용
@@ -28,7 +32,9 @@
   - SUPABASE_SERVICE_ROLE_KEY
   - ANTHROPIC_API_KEY
   - RESEND_API_KEY
-- [ ] **0.6** packages/db/ Supabase 클라이언트 작성
+  - STORE_NAME, BRAND_NAME, STORE_SHORTNAME
+  - WHOLESALE_FROM_EMAIL, WHOLESALE_DEFAULT_RECIPIENT
+- [ ] **0.6** Supabase Storage 버킷 생성 ('assets', public)
 - [ ] **0.7** apps/dashboard 첫 빌드 통과 확인 (`pnpm dev` 실행)
 - [ ] **0.8** 첫 commit + push
 

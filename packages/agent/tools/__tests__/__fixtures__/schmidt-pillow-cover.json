@@ -1,0 +1,44 @@
+{
+  "product": {
+    "id": "test-schmidt-001",
+    "name": "슈미트 냉감 쿨 베개커버 세트(2장)",
+    "description": "여름철 베개커버 위생관리 필수. 폴리에틸렌 51% 냉감 핵심소재 + 폴리에스터 49% 부드러운 촉감. 66x40cm 표준 베개 사이즈.",
+    "category": "생활용품",
+    "price": 8900,
+    "compare_price": 40000,
+    "stock_quantity": 100,
+    "ordered_quantity": 0,
+    "expiry_date": null,
+    "order_deadline": "2025-05-07T14:00:00+09:00",
+    "pickup_date": "2025-05-09",
+    "pickup_deadline": "2025-05-13",
+    "flow_stage": "announcement_1",
+    "status": "active",
+    "urgency_banner": null,
+    "source_image_urls": [],
+    "created_at": "2025-05-13T00:00:00+09:00",
+    "updated_at": "2025-05-13T00:00:00+09:00"
+  },
+  "expected_announcement_stage_1": "🎅 판다팜 & 산타 오늘의상품 8,900원\n🎁 슈미트 냉감 쿨 베개커버 세트(2장)\n\n❌ 시중가: 40,000원대\n🌈 산타가족 특가 👉 8,900원 🔥\n\n🧊 이제 쿨하게 숙면하는 여름밤! 💤\n😌 머리에 땀 안 차는 시원한 잠! \n💦 여름철 베개커버 위생관리 필수!\n🛏️ 2장 세트 번갈아 세탁 사용!\n\n📐 66×40cm 표준 베개 사이즈!\n🧊 폴리에틸렌 51% 냉감 핵심소재!\n🧵 폴리에스터 49% 부드러운 촉감!\n\n😍 역대급 가격으로 냉감베개 커버 득템!\n\n❌ 수량소진시 조기 마감 ❌\n\n⏳ 예약 마감일 : 05월 07일(목) 오후 2시\n🚚 입고 예정일 : 05월 09일(토)\n🚩 수령 마감일 : 05월 13일(수) 까지\n🚩 수령 마감일이 지나면 자동 취소됨을 알려드립니다.\n\n🔴 예약시 상품명 적어주세요 🔴\n✅ 예시) 베개커버 1세트 + 휴대번호 4자리",
+  "structural_checks_stage_1": {
+    "must_contain": [
+      "8,900원",
+      "40,000원대",
+      "판다팜",
+      "산타",
+      "수량소진시 조기 마감",
+      "05월 07일(목) 오후 2시",
+      "05월 09일(토)",
+      "05월 13일(수) 까지",
+      "예약시 상품명 적어주세요"
+    ],
+    "must_match_pattern": {
+      "first_line_emoji": "^🎅",
+      "price_line_emoji_red_x": "^❌ 시중가:",
+      "deadline_emoji": "⏳ 예약 마감일",
+      "delivery_emoji": "🚚 입고 예정일",
+      "pickup_emoji": "🚩 수령 마감일"
+    },
+    "max_length": 1000
+  }
+}
