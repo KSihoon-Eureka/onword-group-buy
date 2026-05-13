@@ -24,27 +24,28 @@
 
 순차 작업. 다른 Phase 시작 전에 완료 필수.
 
-- [ ] **A.1** Supabase 프로젝트 생성 (서울 region) + 환경변수 (.env.local)
-- [ ] **A.2** GitHub repo 생성 + `git push -u origin main`
-- [ ] **A.3** `supabase/migrations/0001_init.sql` 정리 (현재 5 tables만)
-- [ ] **A.4** `0002_multi_tenant.sql`:
+- [x] **A.1** Supabase 프로젝트 생성 (서울 region) + 환경변수 (.env.local) — `onword-dev` (ref: scatsfimosbotzbvzklt), Data API ON / Auto-expose OFF / Auto RLS ON
+- [x] **A.2** GitHub repo 생성 + `git push -u origin main` — `KSihoon-Eureka/onword-group-buy` (private)
+- [x] **A.3** `supabase/migrations/0001_init.sql` 정리 (현재 5 tables만)
+- [x] **A.4** `0002_multi_tenant.sql`:
   - stores, store_members 테이블 생성
   - 기존 5 tables에 store_id FK 추가
   - 기본 RLS 활성화 + 4 action 정책 (SELECT/INSERT/UPDATE/DELETE)
   - orders trigger (store_id 자동 복제)
-- [ ] **A.5** `0003_new_tables.sql`:
+  - GRANT TO authenticated 10 테이블 (Auto-expose OFF 대응)
+- [x] **A.5** `0003_new_tables.sql`:
   - saved_flows 테이블 + default flows trigger
   - audit_log 테이블
   - phone_access_log 테이블
-- [ ] **A.6** `0004_constraints.sql`:
+- [x] **A.6** `0004_constraints.sql`:
   - phone length check (= 4)
   - phone_consent_at NOT NULL
   - generated_assets supersede 컬럼 추가
   - products.primary_image_url, archived_at 추가
-- [ ] **A.7** Storage bucket 생성 (`assets`, public)
-- [ ] **A.8** 첫 번째 사장님 user + store + store_members 수동 생성 (SQL)
-- [ ] **A.9** RLS cross-store leak 테스트 (다른 store의 user로 접근 → 차단 확인)
-- [ ] **A.10** pnpm install + Playwright chromium install
+- [x] **A.7** Storage bucket 생성 (`assets`, public, 50MB)
+- [x] **A.8** 첫 번째 사장님 user + store + store_members 수동 생성 (SQL) — 판다팜 + Sihoon
+- [x] **A.9** RLS cross-store leak 테스트 (다른 store의 user로 접근 → 차단 확인) — User A → Store B 조회 0 rows ✓
+- [x] **A.10** pnpm install + Playwright chromium install — type-check은 skeleton 잔재로 실패 (Phase D TDD 재구현 대상, expected)
 
 > **위험 게이트**: A.9 통과 못 하면 Phase B 시작 금지. 멀티 매장 격리 안 되면 launch 불가.
 
