@@ -89,7 +89,7 @@
 - [ ] **C.4** `ExecutionTracePanel.tsx` (오른쪽 패널)
   - `AgentStepBlock` 시퀀스
   - Supabase Realtime 구독 (`trace:{traceId}`)
-- [ ] **C.5** API route `/api/agent/run` (orchestrator entry)
+- [x] **C.5** API route `/api/agent/run` (orchestrator entry)
   - 인증 확인 → store_id 추출
   - agent_traces row 생성
   - tool 호출 루프 (X3: 실패 시 중단)
