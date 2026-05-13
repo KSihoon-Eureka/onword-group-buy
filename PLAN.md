@@ -195,6 +195,7 @@
 - [ ] **S.2** `apps/lookup-web` (카운터용 주문 조회)
 - [ ] **S.3** 모바일 dashboard 최적화
 - [ ] **S.4** AI가 자주 쓰는 명령 패턴 학습 → saved_flows 자동 제안
+- [ ] **S.5** Sidebar 메뉴 nav `<a href>` → `next/link` `<Link>` 마이그레이션 (UX 개선 — prefetch + client-side navigation. Phase B W2가 `<a>` 사용했음, blocking 아니지만 정통 패턴 아님)
 
 ---
 

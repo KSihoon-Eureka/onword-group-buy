@@ -193,6 +193,8 @@ PRD.md §9.5 / §9.{N}의 `{ComponentName}` 컴포넌트를 구현해줘.
 - 한국어 라벨: PRD.md §9.4
 - 의존: packages/ui/cn (clsx + tailwind-merge)
 - 기존 패턴: {기존 컴포넌트 경로}
+- Next.js 라우팅 패턴: route group `(name)` 채택 여부 + layout.tsx 위치 명시 (예: `app/(dashboard)/layout.tsx`)
+- Dumb / Smart 분리: {이 컴포넌트는 dumb(props만) or smart(fetch + actions)? — Phase B 검증 패턴}
 
 [제약]
 - Tailwind 클래스만 (인라인 style 금지)
@@ -201,6 +203,8 @@ PRD.md §9.5 / §9.{N}의 `{ComponentName}` 컴포넌트를 구현해줘.
 - 모바일/데스크탑 분기: PRD §9.7
 - 시니어 친화 X (대시보드, A9)
 - 라벨 한국어 (영문은 기술 식별자만)
+- 라우팅 nav (메뉴 / 링크) — `<a>` 대신 `next/link`의 `<Link>` 사용 (prefetch + client-side navigation)
+- Dumb 컴포넌트 (packages/ui)인 경우: internal에서 supabase 호출 / fetch / server action import 금지. 모든 데이터 props로만 받음.
 
 [완료 조건]
 - 컴파일 에러 없음
@@ -386,6 +390,60 @@ Before / After 비교:
    - 리팩터 전 / 후 코드 차이
    - 전체 테스트 통과 확인
 ```
+
+### 3.9 Template: 다중 워커 코디네이션 (병렬 worktree)
+
+> Phase B 검증 (2026-05-13, 3 워커 / 4-13분 / 충돌 1건). 2개 이상 워커가 인터페이스 의존 시 필수.
+
+```
+[목표]
+{Phase ID}의 task를 {N}개 워커로 병렬 분담. 각 워커는 자기 worktree에서만 작업.
+
+[분담]
+- W1 ({담당 영역}): {PLAN.md ID 목록}
+- W2 ({담당 영역}): {PLAN.md ID 목록}
+- W{N}: ...
+
+[계약 — 변경 금지]
+워커간 호출 관계 있는 컴포넌트 / 함수 / API의 시그니처를 *명시적*으로 박는다.
+양쪽 prompt에 동일 시그니처 paste. 한 워커가 임의 변경 = 즉시 멈춤.
+
+예 (Phase B W1 ↔ W2 Sidebar):
+  interface SidebarProps {
+    currentStore: Store
+    availableStores: Store[]
+    userEmail: string
+    activePath: string
+    onSwitchStore: (storeId: string) => void | Promise<void>
+    onLogout: () => void | Promise<void>
+  }
+
+[Placeholder 패턴 — staggered merge]
+의존 컴포넌트 미머지 상태에서 워커가 완료 가능하도록 *동일 시그니처 임시 placeholder*를 mount.
+머지 시 import 1줄 교체로 활성화. CI gate 없이도 main 빌드 깨짐 0.
+
+예: W1이 SidebarPlaceholder를 6 props 시그니처 동일하게 작성 → main 머지 가능 → W2 머지 후 layout.tsx 의 import 1줄 교체로 활성.
+
+[Dumb / Smart 분리]
+- Dumb (packages/ui 등): supabase 호출 / fetch / server action import 0, props만 받음
+- Smart (apps/dashboard layout, page): 데이터 fetch + server actions + dumb 컴포넌트 wiring
+- 각 워커 prompt에 "이 워커는 dumb / smart 중 무엇" 명시
+
+[PLAN.md update 규칙 — 충돌 회피]
+- 워커는 *자기 항목만* 체크 ([x])
+- PR 직전 *별도 commit*으로 PLAN.md update (다른 변경과 분리)
+- 부가 설명 줄 신규 추가는 신중 — 인접 라인 hunk 확장으로 다른 워커 PR과 squash 충돌 가능
+- 충돌 발생 시: GitHub web "Resolve conflicts" 직접 편집 (Accept current/incoming/both는 부적합)
+
+[완료 조건 — 모든 워커 공통]
+- PR description에 [범위 밖] 항목 명시 (다음 워커 / 코디네이터가 참조)
+- TypeScript strict 통과, lint 통과
+- 자기 worktree 외 파일 0건 수정
+- 의존 컴포넌트 미머지 상태에서도 placeholder로 빌드 통과
+- PR 생성 후 워커 세션 idle 유지 (코디네이터 ping에 응답 가능)
+```
+
+검증: Phase B에서 W1 (auth backbone) / W2 (dumb Sidebar) / W3 (5 empty pages) 분담. 머지 충돌 1건 (PLAN.md 인접 라인 — `feedback_plan_md_squash_conflict.md` 참조).
 
 ---
 
