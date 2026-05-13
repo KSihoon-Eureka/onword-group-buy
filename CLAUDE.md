@@ -120,6 +120,7 @@ main (항상 배포 가능)
 | 이미지 합성 | `AI_DOCS/poster-composition.md` |
 | 데이터 모델 | `AI_DOCS/data-model.md` |
 | 클라이언트 제약 | `AI_DOCS/client-requirements.md` |
+| **대시보드 UI / 컴포넌트 / 디자인** | **`AI_DOCS/dashboard-ui-patterns.md`** |
 
 ### methodology.md (코드 방법론)
 
@@ -240,6 +241,22 @@ main (항상 배포 가능)
   - Orchestrator: claude-sonnet-4-20250514
   - 코드 작성: Claude Code (CLI)
   - 이미지: 자체 코드 합성 (생성 AI 안 씀)
+
+## 메뉴 구조 (대시보드)
+
+레퍼런스(Versatile Execution Agent)의 5-slot 구조를 공구 도메인에 맞게 재정의:
+
+| 슬롯 | 라우트 | 라벨 (한글) | 역할 |
+|---|---|---|---|
+| 1 | `/` (default) | AI 비서 | Agent Chat + Execution Trace |
+| 2 | `/campaigns` | 공구 현황 | 진행 중 상품 카드 뷰, flow_stage 시각화 |
+| 3 | `/orders` | 주문 관리 | 들어온 주문, 누락 검수, 픽업 처리 |
+| 4 | `/assets` | 자산 | AI 생성 공고/포스터/이메일 (복사 + 재사용) |
+| 5 | `/new` | 상품 등록 | 발주 입력 (워크플로우 진입점) |
+
+모바일 BottomNav는 4개만 (Assets 제외).
+
+상세: `AI_DOCS/dashboard-ui-patterns.md`
 
 ## 명령어
 

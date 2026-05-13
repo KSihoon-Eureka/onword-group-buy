@@ -268,3 +268,91 @@ export interface GeneratePickupTableOutput {
   imageUrl: string
   assetId: string
 }
+
+// ==========================
+// Agent Streaming (레퍼런스 차용)
+// ==========================
+
+/**
+ * 채팅 메시지 - Claude API content와 호환.
+ * 클라이언트가 history로 보관.
+ */
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system'
+  content: string | Array<{
+    type: 'text' | 'tool_use' | 'tool_result'
+    text?: string
+    name?: string
+    input?: Record<string, unknown>
+    tool_use_id?: string
+    content?: string
+  }>
+  timestamp: string
+  latencyMs?: number
+  /** assistant 메시지가 dashboard/poster 등 자산을 생성했는지 */
+  hasAssetGenerated?: boolean
+  /** 자산 ID들 (Assets 메뉴 링크용) */
+  generatedAssetIds?: string[]
+}
+
+/**
+ * Execution Trace의 한 단계.
+ * - text: AI의 "생각" (또는 사용자에게 보여줄 진행 안내)
+ * - tool: 실제 tool 호출 + 결과
+ */
+export interface AgentStep {
+  id: string
+  type: 'text' | 'tool'
+  
+  // text 타입
+  content?: string
+  
+  // tool 타입
+  toolName?: ToolName
+  toolArgs?: Record<string, unknown>
+  result?: {
+    success: boolean
+    message?: string
+    data?: unknown
+  }
+  
+  status: StepStatus
+  latencyMs?: number
+}
+
+/**
+ * 스트리밍 콜백 페이로드.
+ * orchestrator → 클라이언트 (Supabase Realtime 또는 SSE 통해).
+ */
+export interface StreamUpdate {
+  history: ChatMessage[]
+  steps: AgentStep[]
+  isDone: boolean
+  currentText: string
+  /** trace ID — Supabase Realtime 구독에 사용 */
+  traceId: string
+}
+
+// ==========================
+// 메뉴/네비게이션
+// ==========================
+
+export type DashboardTab = 
+  | 'chat'         // AI 비서
+  | 'campaigns'    // 공구 현황
+  | 'orders'       // 주문 관리
+  | 'assets'       // 자산
+  | 'new'          // 상품 등록
+
+export const DASHBOARD_TABS: Array<{
+  id: DashboardTab
+  label: string         // 한글 라벨
+  icon: string          // lucide-react 아이콘 이름
+  mobileVisible: boolean
+}> = [
+  { id: 'chat',      label: 'AI 비서',   icon: 'Bot',      mobileVisible: true  },
+  { id: 'campaigns', label: '공구 현황', icon: 'Activity', mobileVisible: true  },
+  { id: 'orders',    label: '주문 관리', icon: 'Database', mobileVisible: true  },
+  { id: 'assets',    label: '자산',      icon: 'FileText', mobileVisible: false },
+  { id: 'new',       label: '상품 등록', icon: 'Plus',     mobileVisible: true  },
+]
