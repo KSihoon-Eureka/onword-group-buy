@@ -53,18 +53,19 @@
 
 ## Phase B — Dashboard Skeleton (B.1-B.4 병렬 가능)
 
-- [ ] **B.1** `/login` 페이지 + Supabase Auth 클라이언트
+- [x] **B.1** `/login` 페이지 + Supabase Auth 클라이언트
   - email + password 폼
-  - 에러 메시지 ("invalid credentials")
+  - 에러 메시지 ("이메일 또는 비밀번호가 올바르지 않습니다.")
   - 성공 시 `/` 리다이렉트
-- [ ] **B.2** Auth 미들웨어 (`apps/dashboard/middleware.ts`)
+- [x] **B.2** Auth 미들웨어 (`apps/dashboard/middleware.ts`)
   - 미인증 사용자 `/login` 리다이렉트
   - 인증된 사용자 → store_members 조회 → active_store 설정
+  - 분기 4개 단위 테스트 (decideAuth)
 - [x] **B.3** 5-slot 사이드바 + Korean 라벨 (`packages/ui/Sidebar.tsx`)
 - [x] **B.4** StoreSwitcher 컴포넌트 (`packages/ui/StoreSwitcher.tsx`)
 - [x] **B.5** 각 메뉴의 empty placeholder ("곧 추가됨") — 5개 페이지 (`app/(dashboard)/{page,campaigns,orders,assets,new}/page.tsx`)
-- [ ] **B.6** 로그아웃 동작
-- [ ] **B.7** 다중 매장 멤버 시 `/select-store` 화면
+- [x] **B.6** 로그아웃 동작 (signOutAction)
+- [x] **B.7** 다중 매장 멤버 시 `/select-store` 화면
 
 ---
 
