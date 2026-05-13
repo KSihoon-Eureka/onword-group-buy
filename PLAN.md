@@ -62,7 +62,7 @@
   - 인증된 사용자 → store_members 조회 → active_store 설정
 - [x] **B.3** 5-slot 사이드바 + Korean 라벨 (`packages/ui/Sidebar.tsx`)
 - [x] **B.4** StoreSwitcher 컴포넌트 (`packages/ui/StoreSwitcher.tsx`)
-- [ ] **B.5** 각 메뉴의 empty placeholder ("곧 추가됨")
+- [x] **B.5** 각 메뉴의 empty placeholder ("곧 추가됨") — 5개 페이지 (`app/(dashboard)/{page,campaigns,orders,assets,new}/page.tsx`)
 - [ ] **B.6** 로그아웃 동작
 - [ ] **B.7** 다중 매장 멤버 시 `/select-store` 화면
 
