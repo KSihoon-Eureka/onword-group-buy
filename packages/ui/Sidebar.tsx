@@ -1,68 +1,104 @@
 'use client'
 
-/**
- * Sidebar — 데스크탑 사이드바.
- * 출처: Versatile Execution Agent App.tsx L27-63
- * 변경: 메뉴 5개를 공구 도메인으로 재정의, 한글 라벨, lucide 아이콘 매핑
- */
-
-import { Bot, Activity, Database, FileText, Plus } from 'lucide-react'
+import { Bell, LogOut } from 'lucide-react'
+import type { Store } from '@onword/types'
 import { cn } from './cn'
-import type { DashboardTab } from '@onword/types'
-
-const ICONS = {
-  Bot, Activity, Database, FileText, Plus,
-} as const
-
-const MENU_ITEMS: Array<{
-  id: DashboardTab
-  label: string
-  icon: keyof typeof ICONS
-}> = [
-  { id: 'chat',      label: 'AI 비서',   icon: 'Bot' },
-  { id: 'campaigns', label: '공구 현황', icon: 'Activity' },
-  { id: 'orders',    label: '주문 관리', icon: 'Database' },
-  { id: 'assets',    label: '자산',      icon: 'FileText' },
-  { id: 'new',       label: '상품 등록', icon: 'Plus' },
-]
+import { StoreSwitcher } from './StoreSwitcher'
 
 export interface SidebarProps {
-  activeTab: DashboardTab
-  onTabChange: (tab: DashboardTab) => void
+  currentStore: Store
+  availableStores: Store[]
+  userEmail: string
+  activePath: string
+  onSwitchStore: (storeId: string) => void | Promise<void>
+  onLogout: () => void | Promise<void>
 }
 
-export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+type MenuItem = {
+  emoji: string
+  label: string
+  path: string
+}
+
+const MENU_ITEMS: MenuItem[] = [
+  { emoji: '🤖', label: 'AI 비서',   path: '/' },
+  { emoji: '📊', label: '공구 현황', path: '/campaigns' },
+  { emoji: '🗂️', label: '주문 관리', path: '/orders' },
+  { emoji: '📁', label: '자산',      path: '/assets' },
+  { emoji: '➕', label: '상품 등록', path: '/new' },
+]
+
+function isMenuActive(activePath: string, itemPath: string): boolean {
+  if (itemPath === '/') return activePath === '/'
+  return activePath === itemPath || activePath.startsWith(itemPath + '/')
+}
+
+export function Sidebar({
+  currentStore,
+  availableStores,
+  userEmail,
+  activePath,
+  onSwitchStore,
+  onLogout,
+}: SidebarProps) {
   return (
-    <div className="hidden md:flex w-[280px] flex-col h-screen pt-8 pb-6 pl-8 pr-4">
-      <div className="mb-10 px-6 flex items-center">
-        <button
-          onClick={() => onTabChange('chat')}
-          className="text-2xl font-bold text-black tracking-tight text-left hover:opacity-70 transition-opacity"
-        >
-          공구 관리 대시보드
-        </button>
+    <aside className="hidden md:flex w-[280px] flex-col h-screen pt-8 pb-6 pl-8 pr-4 shrink-0">
+      <div className="mb-6">
+        <StoreSwitcher
+          currentStore={currentStore}
+          availableStores={availableStores}
+          onSwitch={onSwitchStore}
+        />
       </div>
 
-      <nav className="flex-1 space-y-1.5 pr-2">
+      <nav className="flex-1 space-y-1.5 overflow-y-auto pr-1">
         {MENU_ITEMS.map((item) => {
-          const Icon = ICONS[item.icon]
+          const active = isMenuActive(activePath, item.path)
           return (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
+            <a
+              key={item.path}
+              href={item.path}
+              aria-current={active ? 'page' : undefined}
               className={cn(
                 'w-full flex items-center gap-3 px-4 py-3 rounded-full text-[14px] font-medium transition-all',
-                activeTab === item.id
+                active
                   ? 'bg-black text-white shadow-sm'
                   : 'text-zinc-500 hover:bg-black/[0.04] hover:text-black'
               )}
             >
-              <Icon size={16} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-              {item.label}
-            </button>
+              <span className="text-[16px] leading-none">{item.emoji}</span>
+              <span>{item.label}</span>
+            </a>
           )
         })}
+
+        <div className="my-3 mx-4 border-t border-black/[0.04]" />
+
+        <button
+          type="button"
+          onClick={() => {
+            /* NotificationCenter는 Phase E.6에서 wire — 자리만 잡음 */
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-full text-[14px] font-medium text-zinc-500 hover:bg-black/[0.04] hover:text-black transition-all"
+        >
+          <Bell size={16} strokeWidth={2} />
+          <span>알림</span>
+        </button>
       </nav>
-    </div>
+
+      <div className="mt-4 pt-4 border-t border-black/[0.04] px-4">
+        <p className="text-[12px] text-zinc-500 truncate mb-2" title={userEmail}>
+          {userEmail}
+        </p>
+        <button
+          type="button"
+          onClick={() => void onLogout()}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-medium text-zinc-700 hover:bg-black/[0.04] hover:text-black transition-all"
+        >
+          <LogOut size={14} strokeWidth={2} />
+          <span>로그아웃</span>
+        </button>
+      </div>
+    </aside>
   )
 }
