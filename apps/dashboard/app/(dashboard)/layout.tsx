@@ -4,22 +4,19 @@
  * Server Component:
  *  1. 미들웨어가 이미 redirect 처리하지만, layout에서도 방어적으로 user / store 검증.
  *  2. user, stores, activeStore, pathname 로드.
- *  3. Sidebar (현재는 placeholder, W2 머지 시 @onword/ui Sidebar로 교체) 마운트.
- *
- * W2 머지 후 교체할 import (단 1줄):
- *   import { Sidebar } from '@onword/ui'
+ *  3. Sidebar (W2 dumb component) 마운트 — switchStoreAction / signOutAction 주입.
  */
 
 import { headers } from 'next/headers'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { Sidebar } from '@onword/ui'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { getUserStores } from '@/lib/auth/store-membership'
 import { ACTIVE_STORE_COOKIE } from '@/lib/supabase/middleware'
 import { PATHNAME_HEADER } from '@/middleware'
 import { switchStoreAction } from '@/lib/actions/switch-store'
 import { signOutAction } from '@/lib/actions/sign-out'
-import { SidebarPlaceholder as Sidebar } from '@/components/dashboard-shell/sidebar-placeholder'
 
 export default async function DashboardLayout({
   children,
