@@ -5,7 +5,9 @@
  * 마이그레이션 0002 (stores, store_members)와 0003-0004의 컬럼 추가가 반영 안 됨.
  * Phase D에서 packages/db를 정리할 예정 (PLAN.md A.10 expected 상태).
  *
- * 현재 워커(B1, auth backbone)는 stores / store_members만 필요하므로 local 확장으로 해결.
+ * 워커 단위 확장:
+ *  - B1 (auth backbone) → stores, store_members
+ *  - C1 (상품 등록) → products에 store_id / primary_image_url / archived_at / pickup_deadline 컬럼 추가
  */
 
 import type { Database as BaseDatabase } from '@onword/db'
@@ -47,52 +49,72 @@ interface SavedFlowRow {
   updated_at: string
 }
 
-export interface Database {
-  public: BaseDatabase['public'] & {
-    Tables: BaseDatabase['public']['Tables'] & {
-      stores: {
-        Row: StoreRow
-        Insert: Partial<StoreRow> & {
-          name: string
-          owner_id: string
-        }
-        Update: Partial<StoreRow>
-      }
-      store_members: {
-        Row: StoreMemberRow
-        Insert: StoreMemberRow
-        Update: Partial<StoreMemberRow>
-      }
-      saved_flows: {
-        Row: SavedFlowRow
-        Insert: {
-          id?: string
-          store_id: string
-          user_id: string
-          name: string
-          prompt: string
-          icon?: string | null
-          display_order?: number
-          run_count?: number
-          last_run_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          store_id?: string
-          user_id?: string
-          name?: string
-          prompt?: string
-          icon?: string | null
-          display_order?: number
-          run_count?: number
-          last_run_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
+type BaseProductRow = BaseDatabase['public']['Tables']['products']['Row']
+type ProductRow = BaseProductRow & {
+  store_id: string
+  primary_image_url: string | null
+  archived_at: string | null
+}
+type ProductInsert = Omit<ProductRow, 'id' | 'created_at' | 'updated_at' | 'ordered_quantity'> & {
+  id?: string
+  ordered_quantity?: number
+  created_at?: string
+  updated_at?: string
+}
+
+type OverriddenTables = Omit<BaseDatabase['public']['Tables'], 'products'> & {
+  stores: {
+    Row: StoreRow
+    Insert: Partial<StoreRow> & {
+      name: string
+      owner_id: string
     }
+    Update: Partial<StoreRow>
+  }
+  store_members: {
+    Row: StoreMemberRow
+    Insert: StoreMemberRow
+    Update: Partial<StoreMemberRow>
+  }
+  products: {
+    Row: ProductRow
+    Insert: ProductInsert
+    Update: Partial<ProductRow>
+  }
+  saved_flows: {
+    Row: SavedFlowRow
+    Insert: {
+      id?: string
+      store_id: string
+      user_id: string
+      name: string
+      prompt: string
+      icon?: string | null
+      display_order?: number
+      run_count?: number
+      last_run_at?: string | null
+      created_at?: string
+      updated_at?: string
+    }
+    Update: {
+      id?: string
+      store_id?: string
+      user_id?: string
+      name?: string
+      prompt?: string
+      icon?: string | null
+      display_order?: number
+      run_count?: number
+      last_run_at?: string | null
+      created_at?: string
+      updated_at?: string
+    }
+  }
+}
+
+export interface Database {
+  public: Omit<BaseDatabase['public'], 'Tables'> & {
+    Tables: OverriddenTables
   }
 }
 

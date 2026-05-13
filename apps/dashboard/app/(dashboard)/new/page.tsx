@@ -1,15 +1,20 @@
-import { Plus } from 'lucide-react'
+/**
+ * /new — 상품 등록 페이지 (PLAN.md C.1, PRD §9.5).
+ *
+ * Server Component shell — (dashboard) layout이 이미 user / store 검증.
+ * 폼 로직은 'use client' ProductRegisterForm에 위임.
+ */
+
+import { ProductRegisterForm } from '@/components/forms/ProductRegisterForm'
+
+export const metadata = {
+  title: '상품 등록 — 공구 관리 대시보드',
+}
 
 export default function NewProductPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4 text-center">
-      <div className="rounded-full bg-zinc-100 p-6">
-        <Plus size={48} className="text-zinc-700" strokeWidth={1.5} />
-      </div>
-      <h1 className="text-2xl font-bold text-black tracking-tight">상품 등록</h1>
-      <p className="text-[14px] text-zinc-500">
-        상품 등록 폼이 곧 추가됩니다
-      </p>
+    <div className="px-4 md:px-8 pt-6 md:pt-8">
+      <ProductRegisterForm />
     </div>
   )
 }
