@@ -35,6 +35,11 @@
 
 ## 시작하기
 
+### 코파운더로 처음 합류한 경우 → `ONBOARDING.md`
+
+이 파일은 Claude Code 세션이 *읽고 따라할 수 있도록* AI 친화적 형식으로 작성됐다.
+첫 세션에서 `ONBOARDING.md`를 Claude Code에게 보여주고 시작하면 됨.
+
 ### 1. 환경 설정
 
 ```bash
