@@ -1,140 +1,244 @@
 /**
- * Tool: crawl_naver_price
- * 
- * 네이버 쇼핑에서 상품 가격비교 정보 크롤링 + 스크린샷.
- * 
- * 트랙: Track E (Day 1 Agent 5)
- * 의존: AI_DOCS/naver-crawl-strategy.md (반드시 Read), Playwright
- * 
- * 구현 절차 (AI_DOCS/naver-crawl-strategy.md 참조):
- *   1. Playwright headless chromium 실행 (UA rotation, ko-KR locale)
- *   2. https://search.shopping.naver.com/search/all?query={productName} 이동
- *   3. .priceCompare 영역 발견 시 그 페이지로 이동
- *   4. 가격, 모델명, 판매처 추출 (page.evaluate)
- *   5. 스크린샷 (fullPage: false)
- *   6. Supabase Storage 업로드 → public URL
- *   7. generated_assets에 type='price_compare' 저장
- * 
- * 안전:
- *   - 요청 간 3-7초 랜덤 지연
+ * Tool: crawl_naver_price (PRD §10.4 + §11.2)
+ *
+ * 네이버 가격비교 페이지 크롤 + 스크린샷.
+ *   - 검색 → 가격비교 영역 데이터 추출 (title / lowestPrice / modelName / sellers)
+ *   - 스크린샷 → Supabase Storage 업로드
+ *   - generated_assets 2건 저장 (type='price_compare_data', type='price_compare_image')
+ *
+ * 시그니처 (packages/types/index.ts — 진실원):
+ *   CrawlNaverPriceOutput = { data, imageUrl, assetIds: { dataId, imageId } }
+ *
+ * 안전 정책 (PRD §11.2 / §17):
+ *   - rate limit 3-7s random delay
  *   - User-Agent rotation
- *   - 24시간 캐시 (동일 상품명이면 generated_assets에서 조회 후 재사용)
- *   - 실패 시 추측 데이터 채우지 말 것 — 빈 data + 사용자 알림
- * 
- * Vercel 배포 시 주의:
- *   - Vercel serverless의 함수 시간 제한 (10초 free, 60초 pro)
- *   - Playwright Chromium은 무겁다 → @sparticuz/chromium 사용 권장
- *   - 또는 별도 워커 (Railway/Render)
+ *   - 차단 (CAPTCHA / HTTP 403) 감지 → throw. 추측 데이터 채움 절대 금지.
+ *   - 가격비교 페이지 없을 시 null 필드 반환 (가격 fabricate X).
+ *
+ * Mock 가능 포인트 (TDD 강제):
+ *   - vi.mock('playwright')  : chromium.launch
+ *   - vi.mock('@onword/db')  : createServiceClient / uploadToStorage
  */
 
-import { chromium, Browser, BrowserContext } from 'playwright'
+import { chromium, type Browser, type BrowserContext } from 'playwright'
 import { createServiceClient, uploadToStorage } from '@onword/db'
 import type {
   CrawlNaverPriceInput,
   CrawlNaverPriceOutput,
 } from '@onword/types'
 
-const USER_AGENTS = [
+// =====================================================
+// 상수
+// =====================================================
+
+const RATE_LIMIT_MIN_MS = 3000
+const RATE_LIMIT_MAX_MS = 7000
+
+const USER_AGENTS: readonly string[] = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
 ]
 
-function randomUA(): string {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
-}
+const CAPTCHA_PATTERNS = [
+  /CAPTCHA/i,
+  /보안\s*인증/,
+  /접근\s*차단/,
+  /비정상적인\s*접근/,
+  /자동화된\s*요청/,
+]
 
-async function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+// =====================================================
+// Public entry
+// =====================================================
 
 export async function crawlNaverPrice(
-  input: CrawlNaverPriceInput & { _traceId?: string }
+  input: CrawlNaverPriceInput & { _traceId?: string },
 ): Promise<CrawlNaverPriceOutput> {
-  const { productName, _traceId } = input
-  const supabase = createServiceClient()
-  
-  // 0. 24시간 캐시 체크
-  const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
-  const { data: cached } = await supabase
-    .from('generated_assets')
-    .select('*')
-    .eq('type', 'price_compare')
-    .gt('created_at', dayAgo)
-    .ilike('metadata->>productName', productName)
-    .limit(1)
-    .single()
-  
-  if (cached) {
-    return {
-      data: cached.metadata?.data ?? {} as any,
-      imageUrl: cached.asset_url ?? '',
-      assetId: cached.id,
-    }
+  // ---- input validation
+  if (!input.productName || input.productName.trim().length === 0) {
+    throw new Error('productName is required')
   }
-  
+
+  const supabase = createServiceClient()
+
   let browser: Browser | null = null
   let context: BrowserContext | null = null
-  
+
   try {
-    // 1. Playwright 실행
+    // ---- launch playwright
     browser = await chromium.launch({
       headless: true,
       args: ['--disable-blink-features=AutomationControlled'],
     })
     context = await browser.newContext({
-      userAgent: randomUA(),
+      userAgent: randomUserAgent(),
       locale: 'ko-KR',
       viewport: { width: 1280, height: 800 },
     })
-    
+
     const page = await context.newPage()
-    
-    // 2. 검색
-    await page.goto(
-      `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(productName)}`,
-      { waitUntil: 'networkidle', timeout: 15000 }
-    )
-    
-    await delay(3000 + Math.random() * 4000)
-    
-    // TODO: 3-4. 가격비교 페이지 이동 + 데이터 추출
-    //   - .priceCompare 셀렉터는 자주 바뀜. 발견 시 AI_DOCS/naver-crawl-strategy.md 업데이트
-    //   - page.evaluate로 title, lowestPrice, sellers 추출
-    const data = await page.evaluate(() => ({
-      title: null as string | null,
-      lowestPrice: null as string | null,
-      modelName: null as string | null,
-      sellers: [] as Array<{ name: string; price: string }>,
-    }))
-    
-    // 5. 스크린샷
+
+    // ---- 1. 검색
+    const searchUrl = `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(
+      input.productName,
+    )}`
+    await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 15_000 })
+
+    // ---- rate limit
+    await page.waitForTimeout(randomDelayMs())
+
+    // ---- 차단 감지
+    const html = await page.content()
+    assertNotBlocked(html)
+
+    // ---- 2. 데이터 추출 (page.evaluate)
+    const data = (await page.evaluate(extractPriceScript)) as CrawlNaverPriceOutput['data']
+
+    // ---- 3. 스크린샷
     const screenshot = await page.screenshot({ fullPage: false })
-    
-    // 6. Storage 업로드
-    const filename = `naver-prices/${encodeURIComponent(productName)}-${Date.now()}.png`
-    const imageUrl = await uploadToStorage(filename, screenshot, 'image/png')
-    
-    // 7. generated_assets 저장
-    const { data: asset, error } = await supabase
-      .from('generated_assets')
-      .insert({
-        trace_step_id: _traceId ?? null,
-        type: 'price_compare',
-        asset_url: imageUrl,
-        metadata: { productName, data },
-      })
-      .select('id')
-      .single()
-    
-    if (error || !asset) {
-      throw new Error(`Failed to save asset: ${error?.message}`)
+    const screenshotBuf = Buffer.isBuffer(screenshot)
+      ? screenshot
+      : Buffer.from(screenshot)
+
+    // ---- 4. Storage 업로드
+    const filename = `naver-prices/${encodeURIComponent(input.productName)}-${Date.now()}.png`
+    const imageUrl = await uploadToStorage(filename, screenshotBuf, 'image/png')
+
+    // ---- 5. generated_assets 저장 — 2건 (data + image)
+    const dataId = await saveAsset(supabase, {
+      productId: null,
+      traceStepId: input._traceId ?? null,
+      type: 'price_compare_data',
+      assetUrl: null,
+      content: JSON.stringify(data),
+      metadata: { productName: input.productName, data },
+    })
+
+    const imageId = await saveAsset(supabase, {
+      productId: null,
+      traceStepId: input._traceId ?? null,
+      type: 'price_compare_image',
+      assetUrl: imageUrl,
+      content: null,
+      metadata: { productName: input.productName },
+    })
+
+    return {
+      data,
+      imageUrl,
+      assetIds: { dataId, imageId },
     }
-    
-    return { data, imageUrl, assetId: asset.id }
-    
   } finally {
-    await context?.close()
-    await browser?.close()
+    try {
+      await context?.close()
+    } catch {
+      /* swallow */
+    }
+    try {
+      await browser?.close()
+    } catch {
+      /* swallow */
+    }
+  }
+}
+
+// =====================================================
+// Helpers
+// =====================================================
+
+function randomUserAgent(): string {
+  const idx = Math.floor(Math.random() * USER_AGENTS.length)
+  return USER_AGENTS[idx]
+}
+
+function randomDelayMs(): number {
+  return RATE_LIMIT_MIN_MS + Math.floor(Math.random() * (RATE_LIMIT_MAX_MS - RATE_LIMIT_MIN_MS))
+}
+
+function assertNotBlocked(html: string): void {
+  for (const pat of CAPTCHA_PATTERNS) {
+    if (pat.test(html)) {
+      throw new Error('네이버 차단 감지 — CAPTCHA 또는 접근 제한. 추측 데이터 채움 금지 (PRD §17).')
+    }
+  }
+}
+
+async function saveAsset(
+  supabase: ReturnType<typeof createServiceClient>,
+  args: {
+    productId: string | null
+    traceStepId: string | null
+    type: 'price_compare_data' | 'price_compare_image'
+    assetUrl: string | null
+    content: string | null
+    metadata: Record<string, unknown>
+  },
+): Promise<string> {
+  const { data, error } = (await supabase
+    .from('generated_assets')
+    .insert({
+      product_id: args.productId,
+      trace_step_id: args.traceStepId,
+      type: args.type,
+      asset_url: args.assetUrl,
+      content: args.content,
+      metadata: args.metadata,
+    } as never)
+    .select('id')
+    .single()) as { data: { id: string } | null; error: { message: string } | null }
+
+  if (error || !data) {
+    throw new Error(`Failed to save asset (${args.type}): ${error?.message ?? 'no data'}`)
+  }
+  return data.id
+}
+
+/**
+ * 브라우저 컨텍스트 안에서 실행. vitest mock 환경에선 page.evaluate 가 mock 으로 대체.
+ *
+ * 셀렉터는 네이버 변경 시 깨질 위험 — 깨질 시 null 채움 (가격 fabricate X — PRD §17).
+ */
+function extractPriceScript(): {
+  title: string | null
+  lowestPrice: string | null
+  modelName: string | null
+  sellers: Array<{ name: string; price: string }>
+} {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const doc: any = (globalThis as any).document
+    if (!doc) {
+      return { title: null, lowestPrice: null, modelName: null, sellers: [] }
+    }
+
+    const titleEl = doc.querySelector('h2, h3, [class*="title"]') as { textContent?: string } | null
+    const priceEl = doc.querySelector('[class*="price"], strong[class*="num"]') as {
+      textContent?: string
+    } | null
+
+    const sellerNodes = Array.from(
+      doc.querySelectorAll('[class*="seller"], [class*="mall"]'),
+    ) as Array<{ textContent?: string; querySelector?: (s: string) => { textContent?: string } | null }>
+
+    const sellers: Array<{ name: string; price: string }> = []
+    for (const node of sellerNodes.slice(0, 10)) {
+      const nameEl = node.querySelector?.('[class*="name"]')
+      const priceNodeEl = node.querySelector?.('[class*="price"]')
+      const name = (nameEl?.textContent ?? '').trim()
+      const price = (priceNodeEl?.textContent ?? '').trim()
+      if (name && price) sellers.push({ name, price })
+    }
+
+    return {
+      title: titleEl?.textContent?.trim() ?? null,
+      lowestPrice: priceEl?.textContent?.trim() ?? null,
+      modelName: null, // 모델명 셀렉터는 prod 검증 필요 — 본 구현은 null 반환 (fabricate X)
+      sellers,
+    }
+  } catch {
+    return { title: null, lowestPrice: null, modelName: null, sellers: [] }
   }
 }

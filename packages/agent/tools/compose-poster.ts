@@ -1,34 +1,28 @@
 /**
- * Tool: compose_poster
- * 
- * 기존 상품 이미지 + 텍스트 오버레이로 그룹채팅용 포스터 합성.
- * 생성 AI 사용 안 함 — Sharp로 합성.
- * 
- * 트랙: Track G (Day 2 Agent 1)
- * 의존: AI_DOCS/poster-composition.md (반드시 Read), Sharp, 한글 폰트
- * 
- * 출력: 800x950 PNG, Supabase Storage 업로드 + URL 반환
- * 
- * 구현 절차 (AI_DOCS/poster-composition.md 참조):
- *   1. productId로 products 조회
- *   2. baseImageUrl에서 이미지 fetch → Buffer
- *   3. Sharp로 3개 영역 렌더:
- *      a. 상단 배너 (보라색, 입고/수령 날짜)
- *      b. 중앙 상품 이미지 (800x600, fit: cover)
- *      c. 하단 정보 (카테고리, 가격, 규격)
- *   4. composite로 합성
- *   5. PNG 출력 → Supabase Storage 업로드
- *   6. generated_assets에 type='poster' 저장
- * 
- * 폰트 셋업:
- *   - Pretendard 또는 Noto Sans KR
- *   - Vercel 배포 시: public/fonts/ 에 .woff2 배치
- *   - Sharp SVG 렌더링 시 폰트 파일 경로 명시 필요
- * 
- * 입력 검증:
- *   - baseImageBuffer 사이즈: 100KB ~ 10MB
- *   - 지원 포맷: JPEG, PNG, WebP
- *   - 너비 최소 600px
+ * Tool: compose_poster (PRD §10.5 + §12)
+ *
+ * 상품 이미지 + 텍스트 합성으로 카카오톡 오픈채팅용 포스터 PNG 생성.
+ *   - 800×950 PNG (50 banner + 600 image + 300 bottom)
+ *   - store.primary_color (배너 / 카테고리 / 정보 바)
+ *   - store.accent_color (가격)
+ *   - 생성 AI 사용 안 함 — Sharp 합성만.
+ *
+ * 의존:
+ *   - sharp (실제 라이브러리 호출)
+ *   - @onword/db: createServiceClient, uploadToStorage
+ *
+ * 폰트 정책:
+ *   - SVG에 `Pretendard, 'Noto Sans KR', sans-serif` 명시.
+ *   - 프로젝트 폰트 파일 없음 → Sharp(librsvg)가 fontconfig fallback (sans-serif).
+ *   - 픽셀 단위 시각 검증은 Phase F.6 (수동 visual review).
+ *
+ * 에러 정책:
+ *   - input validation 실패 → throw 동기
+ *   - product / store 미존재 → throw
+ *   - primary_image_url 없고 baseImageUrl 없음 → throw
+ *   - hex color invalid → throw
+ *   - base image fetch 실패 / 600px 미만 → throw
+ *   - storage / asset insert 실패 → throw
  */
 
 import sharp from 'sharp'
@@ -38,65 +32,120 @@ import type {
   ComposePosterOutput,
 } from '@onword/types'
 
+// =====================================================
+// 상수
+// =====================================================
+
 const POSTER_WIDTH = 800
 const POSTER_HEIGHT = 950
-const PURPLE = '#5B2E91'
+const BANNER_HEIGHT = 50
+const IMAGE_HEIGHT = 600
+const BOTTOM_HEIGHT = 300
+
 const WHITE = '#FFFFFF'
+const TEXT_GRAY = '#6B7280'
+
+const MIN_IMAGE_WIDTH = 600
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024 // 10 MB
+
+const FONT_FAMILY = "Pretendard, 'Noto Sans KR', sans-serif"
+
+// =====================================================
+// 내부 타입
+// =====================================================
+
+interface ProductRow {
+  id: string
+  store_id: string
+  name: string
+  description: string | null
+  category: string | null
+  price: number
+  primary_image_url: string | null
+  pickup_date: string
+  pickup_deadline: string
+}
+
+interface StoreRow {
+  id: string
+  name: string
+  primary_color: string
+  accent_color: string
+}
+
+// =====================================================
+// Public entry
+// =====================================================
 
 export async function composePoster(
-  input: ComposePosterInput & { _traceId?: string }
+  input: ComposePosterInput & { _traceId?: string },
 ): Promise<ComposePosterOutput> {
-  const { productId, baseImageUrl, _traceId } = input
+  // 1. 입력 검증
+  if (!input || !input.productId) {
+    throw new Error('productId is required')
+  }
+  const { productId, baseImageUrl: explicitUrl, textOverlay, _traceId } = input
+
   const supabase = createServiceClient()
-  
-  // 1. 상품 조회
-  const { data: product, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('id', productId)
-    .single()
-  
-  if (error || !product) {
-    throw new Error(`Product not found: ${productId}`)
+
+  // 2. 상품 + 매장 조회
+  const product = await fetchProduct(supabase, productId)
+  const store = await fetchStore(supabase, product.store_id)
+
+  // 3. 색상 검증
+  assertHexColor(store.primary_color, 'store.primary_color')
+  assertHexColor(store.accent_color, 'store.accent_color')
+
+  // 4. 이미지 URL 결정
+  const imageUrl = explicitUrl ?? product.primary_image_url
+  if (!imageUrl) {
+    throw new Error(
+      `No base image: products.primary_image_url is null and baseImageUrl not provided (productId=${productId})`,
+    )
   }
-  
-  // 2. 기본 이미지 fetch
-  const imageResp = await fetch(baseImageUrl)
-  if (!imageResp.ok) {
-    throw new Error(`Failed to fetch base image: ${imageResp.statusText}`)
+
+  // 5. base image fetch
+  const resp = await fetch(imageUrl)
+  if (!resp.ok) {
+    throw new Error(
+      `Failed to fetch base image (${resp.status} ${resp.statusText}): ${imageUrl}`,
+    )
   }
-  const baseImageBuffer = Buffer.from(await imageResp.arrayBuffer())
-  
-  // 입력 검증
-  if (baseImageBuffer.length > 10 * 1024 * 1024) {
-    throw new Error('Base image too large (>10MB)')
+  const baseImageBuffer = Buffer.from(await resp.arrayBuffer())
+
+  if (baseImageBuffer.length > MAX_IMAGE_BYTES) {
+    throw new Error(
+      `Base image too large: ${baseImageBuffer.length} bytes (max ${MAX_IMAGE_BYTES})`,
+    )
   }
-  
+
+  // 6. base image 메타 검증
   const meta = await sharp(baseImageBuffer).metadata()
-  if (!meta.width || meta.width < 600) {
-    throw new Error(`Base image too small: ${meta.width}px (min 600px)`)
+  if (!meta.width || meta.width < MIN_IMAGE_WIDTH) {
+    throw new Error(
+      `Base image too small: width=${meta.width ?? 'unknown'}px (min ${MIN_IMAGE_WIDTH}px)`,
+    )
   }
-  
-  // 3. 중앙 이미지 리사이즈
+
+  // 7. 중앙 상품 이미지 리사이즈
   const centerImage = await sharp(baseImageBuffer)
-    .resize(POSTER_WIDTH, 600, { fit: 'cover' })
+    .resize(POSTER_WIDTH, IMAGE_HEIGHT, { fit: 'cover' })
     .toBuffer()
-  
-  // TODO: 4. 상단 배너 + 하단 섹션 렌더
-  //   - SVG로 텍스트 렌더 (한글 폰트 명시)
-  //   - AI_DOCS/poster-composition.md의 layout 정확히 따름
-  //   - 상품명, 가격, 마감일 등 변수 매핑
-  const topBanner = await renderBanner({
-    text: `입고예정일 ${formatDate(product.pickup_date)}, 수령 마감일 ${formatDate(product.pickup_deadline)} 까지`,
-  })
-  
+
+  // 8. 상단 배너 (입고/수령 마감일)
+  const bannerText = `입고예정일 ${formatKoreanDate(product.pickup_date)}, 수령 마감일 ${formatKoreanDate(product.pickup_deadline)} 까지`
+  const topBanner = await renderBanner(bannerText, store.primary_color)
+
+  // 9. 하단 영역 (카테고리 / 가격 / 규격)
   const bottomSection = await renderBottom({
-    category: product.category ?? product.name,
+    category: textOverlay?.category ?? product.category ?? product.name,
     price: product.price,
-    spec: product.description ?? '',
+    spec: textOverlay?.spec ?? product.description ?? '',
+    primaryColor: store.primary_color,
+    accentColor: store.accent_color,
   })
-  
-  // 5. 합성
+
+  // 10. 합성 → 800×950 PNG
   const finalImage = await sharp({
     create: {
       width: POSTER_WIDTH,
@@ -107,98 +156,148 @@ export async function composePoster(
   })
     .composite([
       { input: topBanner, top: 0, left: 0 },
-      { input: centerImage, top: 50, left: 0 },
-      { input: bottomSection, top: 650, left: 0 },
+      { input: centerImage, top: BANNER_HEIGHT, left: 0 },
+      { input: bottomSection, top: BANNER_HEIGHT + IMAGE_HEIGHT, left: 0 },
     ])
     .png()
     .toBuffer()
-  
-  // 6. Storage 업로드
+
+  // 11. Storage 업로드
   const filename = `posters/${productId}-${Date.now()}.png`
   const posterUrl = await uploadToStorage(filename, finalImage, 'image/png')
-  
-  // 7. generated_assets 저장
-  const { data: asset, error: assetError } = await supabase
+
+  // 12. generated_assets 저장
+  const { data: asset, error: assetError } = (await supabase
     .from('generated_assets')
     .insert({
+      store_id: store.id,
       product_id: productId,
       trace_step_id: _traceId ?? null,
       type: 'poster',
       asset_url: posterUrl,
-      metadata: { width: POSTER_WIDTH, height: POSTER_HEIGHT },
-    })
+      metadata: {
+        width: POSTER_WIDTH,
+        height: POSTER_HEIGHT,
+        primaryColor: store.primary_color,
+        accentColor: store.accent_color,
+      },
+    } as never)
     .select('id')
-    .single()
-  
-  if (assetError || !asset) {
-    throw new Error(`Failed to save asset: ${assetError?.message}`)
+    .single()) as {
+    data: { id: string } | null
+    error: { message: string } | null
   }
-  
+
+  if (assetError || !asset) {
+    throw new Error(
+      `Failed to save poster asset: ${assetError?.message ?? 'no data'}`,
+    )
+  }
+
   return { posterUrl, assetId: asset.id }
 }
 
-// ==========================
-// 내부 렌더링 helpers
-// ==========================
+// =====================================================
+// Supabase helpers
+// =====================================================
 
-async function renderBanner({ text }: { text: string }): Promise<Buffer> {
-  // TODO: SVG 텍스트 렌더 + 한글 폰트 명시
-  const svg = `
-    <svg width="${POSTER_WIDTH}" height="50" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="${PURPLE}"/>
-      <text 
-        x="50%" 
-        y="50%" 
-        font-family="Pretendard, 'Noto Sans KR', sans-serif"
-        font-size="18"
-        font-weight="bold"
-        fill="${WHITE}"
-        text-anchor="middle"
-        dominant-baseline="middle"
-      >${escapeXml(text)}</text>
-    </svg>
-  `
+async function fetchProduct(
+  supabase: ReturnType<typeof createServiceClient>,
+  productId: string,
+): Promise<ProductRow> {
+  const { data, error } = (await supabase
+    .from('products')
+    .select('*')
+    .eq('id', productId)
+    .single()) as {
+    data: ProductRow | null
+    error: { message: string } | null
+  }
+
+  if (error) {
+    throw new Error(`Failed to fetch product: ${error.message}`)
+  }
+  if (!data) {
+    throw new Error(`Product not found: ${productId}`)
+  }
+  return data
+}
+
+async function fetchStore(
+  supabase: ReturnType<typeof createServiceClient>,
+  storeId: string,
+): Promise<StoreRow> {
+  // store_id 필드가 packages/db 의 Row 타입에 누락 (cascading 회피 위해 cast).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const builder: any = supabase.from('stores').select('*')
+  const { data, error } = (await builder.eq('id', storeId).single()) as {
+    data: StoreRow | null
+    error: { message: string } | null
+  }
+
+  if (error) {
+    throw new Error(`Failed to fetch store: ${error.message}`)
+  }
+  if (!data) {
+    throw new Error(`Store not found: ${storeId}`)
+  }
+  return data
+}
+
+// =====================================================
+// 색상 검증
+// =====================================================
+
+const HEX_COLOR_RE = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/
+
+function assertHexColor(value: string, label: string): void {
+  if (!HEX_COLOR_RE.test(value)) {
+    throw new Error(`Invalid hex color for ${label}: ${value}`)
+  }
+}
+
+// =====================================================
+// SVG 렌더 helpers
+// =====================================================
+
+async function renderBanner(text: string, bgColor: string): Promise<Buffer> {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${POSTER_WIDTH}" height="${BANNER_HEIGHT}">
+  <rect width="100%" height="100%" fill="${bgColor}"/>
+  <text x="50%" y="50%"
+        font-family="${FONT_FAMILY}"
+        font-size="18" font-weight="bold" fill="${WHITE}"
+        text-anchor="middle" dominant-baseline="middle">${escapeXml(text)}</text>
+</svg>`
   return sharp(Buffer.from(svg)).png().toBuffer()
 }
 
-async function renderBottom({ 
-  category, 
-  price, 
-  spec 
-}: { 
+async function renderBottom(args: {
   category: string
   price: number
-  spec: string 
+  spec: string
+  primaryColor: string
+  accentColor: string
 }): Promise<Buffer> {
-  // TODO: 카테고리 라벨 + 큰 가격 표시 + 규격 정보
-  //       슈미트 포스터 형식 정확히 따라야 함 (AI_DOCS/poster-composition.md 참조)
-  const priceStr = price.toLocaleString('ko-KR')
-  const svg = `
-    <svg width="${POSTER_WIDTH}" height="300" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="${WHITE}"/>
-      <text 
-        x="50%" y="60"
-        font-family="Pretendard, sans-serif"
-        font-size="24" font-weight="bold"
-        fill="${PURPLE}"
-        text-anchor="middle"
-      >${escapeXml(category)}</text>
-      <text 
-        x="50%" y="160"
-        font-family="Pretendard, sans-serif"
-        font-size="72" font-weight="bold"
-        fill="#E11D48"
-        text-anchor="middle"
-      >${priceStr}원</text>
-      <text 
-        x="50%" y="240"
-        font-family="Pretendard, sans-serif"
-        font-size="14"
-        fill="#6B7280"
-        text-anchor="middle"
-      >${escapeXml(spec.slice(0, 60))}</text>
-    </svg>
-  `
+  const priceStr = args.price.toLocaleString('ko-KR')
+  // spec 최대 60자 / 한 줄
+  const spec = args.spec.length > 60 ? args.spec.slice(0, 60) + '…' : args.spec
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${POSTER_WIDTH}" height="${BOTTOM_HEIGHT}">
+  <rect width="100%" height="100%" fill="${WHITE}"/>
+  <text x="50%" y="60"
+        font-family="${FONT_FAMILY}"
+        font-size="26" font-weight="700" fill="${args.primaryColor}"
+        text-anchor="middle">${escapeXml(args.category)}</text>
+  <text x="50%" y="170"
+        font-family="${FONT_FAMILY}"
+        font-size="72" font-weight="800" fill="${args.accentColor}"
+        text-anchor="middle">🎁 ${escapeXml(priceStr)}원</text>
+  <rect x="40" y="220" width="${POSTER_WIDTH - 80}" height="40" rx="6" fill="${args.primaryColor}" opacity="0.08"/>
+  <text x="50%" y="246"
+        font-family="${FONT_FAMILY}"
+        font-size="14" fill="${TEXT_GRAY}"
+        text-anchor="middle">${escapeXml(spec)}</text>
+</svg>`
   return sharp(Buffer.from(svg)).png().toBuffer()
 }
 
@@ -211,8 +310,22 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;')
 }
 
-function formatDate(iso: string): string {
-  // TODO: date-fns로 "MM월 DD일(요일)" 형식
-  const d = new Date(iso)
-  return `${d.getMonth() + 1}/${d.getDate()}`
+// =====================================================
+// 날짜 포맷 (KST 기준 — generate-announcement 와 동일 규칙)
+// =====================================================
+
+const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토']
+
+function formatKoreanDate(input: string): string {
+  let d: Date
+  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    d = new Date(`${input}T00:00:00Z`)
+  } else {
+    const t = new Date(input)
+    d = new Date(t.getTime() + 9 * 60 * 60 * 1000)
+  }
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  const weekday = WEEKDAYS_KO[d.getUTCDay()]
+  return `${month}월 ${day}일(${weekday})`
 }
