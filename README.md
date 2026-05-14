@@ -26,14 +26,19 @@
 ## 기술 스택
 
 - **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind
-- **Backend:** Next.js API Routes + Supabase
-- **AI:** Claude API (claude-sonnet-4) with tool_use
-- **Monorepo:** Turborepo + pnpm
-- **Crawling:** Playwright
-- **Image:** Sharp
+- **Backend:** Next.js API Routes + Supabase (Postgres + Auth + Storage + RLS)
+- **AI:** Claude API (claude-sonnet-4) — tool_use dynamic loop + 정적 chain
+- **Monorepo:** Turborepo + pnpm workspaces
+- **Crawling:** Playwright (rate-limit + UA rotation)
+- **Image:** Sharp + Pretendard 폰트 (생성 AI 미사용)
 - **Email:** Resend
+- **Cron:** Vercel Cron (auto_no_show + pipa_retention 매일 00:00 KST)
 
 ## 시작하기
+
+### 매장 사장님 → `SHOP_OWNER_GUIDE.md`
+
+대시보드 사용법 1페이지. 로그인 → 상품 등록 → 공구 시작 → 카톡 paste → 픽업.
 
 ### 코파운더로 처음 합류한 경우 → `ONBOARDING.md`
 
