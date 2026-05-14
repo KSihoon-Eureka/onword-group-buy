@@ -519,7 +519,8 @@ create table agent_traces (
   user_id uuid references auth.users(id),       -- 누가 실행
   
   action text not null,
-  -- start_campaign | close_orders | notify_warehouse | announce_pickup | urgent_alert
+  -- start_campaign | close_orders | notify_warehouse | announce_pickup | urgent_alert | free_text
+  -- free_text = ChatView 자유 텍스트 메시지 (Claude dynamic tool_use loop, Phase D에서 활성)
   
   status text default 'running',
   -- running | completed | failed | cancelled (A3: failed 시 chain 중단)

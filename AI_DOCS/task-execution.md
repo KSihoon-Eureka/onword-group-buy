@@ -435,15 +435,47 @@ Before / After 비교:
 - 부가 설명 줄 신규 추가는 신중 — 인접 라인 hunk 확장으로 다른 워커 PR과 squash 충돌 가능
 - 충돌 발생 시: GitHub web "Resolve conflicts" 직접 편집 (Accept current/incoming/both는 부적합)
 
+[Contract 사전 검증 (코디네이터 책임 — prompt 작성 *전*)]
+prompt에 사용된 *모든 식별자*가 codebase에 존재하는지 확인:
+- enum 값 (ActionName, ToolName, FlowStage, AssetType, StoreMemberRole 등) → packages/types/index.ts 존재 grep 확인
+- props 시그니처 → 기존 dumb 컴포넌트 export와 일치 (또는 신규 시 양쪽 prompt에 동일 paste)
+- API route shape → PRD §15.1과 일치
+- task / tool 카운트 → PRD §10 (tool 이름 수) vs PLAN.md (task ID 수) 구별
+
+모순 발견 시:
+- 옵션 A (cascading 정식): 사용자 명시 승인 → packages/types / PRD 수정 → 그 후 prompt 발행
+- 옵션 B (prompt 변경): 해당 식별자를 codebase 기존 것으로 대체 또는 prompt에서 제거
+
+*절대 금지*: 모순 무시하고 prompt 발행 — 워커가 모순 발견 시 자기 판단으로 처리해서 contract 깨짐.
+
+[Worker contract validation (워커 책임 — paste 받은 직후)]
+워커가 prompt 받은 *첫 작업*으로 contract 검증:
+- prompt의 모든 식별자 (enum/props/API/카운트)가 codebase와 일치하는가?
+- 모순 발견 시 *즉시 멈춤 + 보고*. 다음 형식:
+  ⚠️ CONTRACT MISMATCH
+   prompt: "<인용>"
+   codebase (<path>:<line>): "<다른 값>"
+   결정 필요: 어느 쪽 우선?
+- 사용자/코디네이터 결정 후 진행. *절대 자기 판단 X* (보수적 거절 또는 prompt 무시 모두 금지)
+
+[Contract discrepancy in PR (워커 책임 — PR 생성 시)]
+구현 도중 contract 모순 발견했지만 작업 진행해야 했을 때 (위 validation 단계 놓침):
+- PR description에 명시적 "## Contract Discrepancy (확인 필요)" 섹션 추가
+- 모순 항목 + 워커 임시 처리 + 결정 필요 사항 명시
+- 코디네이터가 머지 *전* 결정
+
 [완료 조건 — 모든 워커 공통]
 - PR description에 [범위 밖] 항목 명시 (다음 워커 / 코디네이터가 참조)
+- Contract Discrepancy 있으면 PR body 명시 (위 §3.9 패턴)
 - TypeScript strict 통과, lint 통과
 - 자기 worktree 외 파일 0건 수정
 - 의존 컴포넌트 미머지 상태에서도 placeholder로 빌드 통과
 - PR 생성 후 워커 세션 idle 유지 (코디네이터 ping에 응답 가능)
 ```
 
-검증: Phase B에서 W1 (auth backbone) / W2 (dumb Sidebar) / W3 (5 empty pages) 분담. 머지 충돌 1건 (PLAN.md 인접 라인 — `feedback_plan_md_squash_conflict.md` 참조).
+검증:
+- Phase B (2026-05-13): W1 (auth backbone) / W2 (dumb Sidebar) / W3 (5 empty pages) 분담. 머지 충돌 1건 (PLAN.md 인접 라인 — `feedback_plan_md_squash_conflict.md` 참조).
+- Phase C (2026-05-13): W4 (Product 등록) / W5 (ChatView + SavedFlows) / W6 (Agent API) 분담. Contract discrepancy 1건 (free_text — `feedback_contract_validation.md` 참조). L3 (워커 PR body 명시) 작동 → 머지 전 발견. L1/L2 미작동 → §3.9 보강.
 
 ---
 

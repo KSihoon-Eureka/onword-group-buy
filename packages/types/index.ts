@@ -59,6 +59,7 @@ export type ActionName =
   | 'notify_warehouse'       // Step 8
   | 'announce_pickup'        // Step 9
   | 'urgent_alert'           // NEW: Step 6b (마감 임박)
+  | 'free_text'              // NEW: ChatView 자유 텍스트 메시지 — Claude dynamic tool_use loop (Phase D에서 활성)
 
 export type AnnouncementStage = 1 | 2 | 3
 
