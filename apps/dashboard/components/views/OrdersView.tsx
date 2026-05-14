@@ -21,7 +21,7 @@ interface OrdersViewProps {
   onNavigate: (tab: DashboardTab) => void
 }
 
-export function OrdersView({ onNavigate }: OrdersViewProps) {
+export function OrdersView(_props: OrdersViewProps) {
   return (
     <div className="h-full p-6">
       <h2 className="text-2xl font-bold text-zinc-900 tracking-tight mb-6">주문 관리</h2>

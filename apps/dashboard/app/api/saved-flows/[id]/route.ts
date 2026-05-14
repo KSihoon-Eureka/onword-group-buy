@@ -84,9 +84,11 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   if (parsed.value.icon !== undefined) patch.icon = parsed.value.icon
   if (parsed.value.displayOrder !== undefined) patch.display_order = parsed.value.displayOrder
 
+  // `as never` cast: @supabase/ssr 0.5.2 + supabase-js 2.105 typing 호환성 이슈.
+  // 동일 패턴: apps/dashboard/app/api/products/route.ts.
   const { data, error } = await supabase
     .from('saved_flows')
-    .update(patch)
+    .update(patch as never)
     .eq('id', params.id)
     .eq('store_id', auth.storeId)
     .eq('user_id', auth.user.id)

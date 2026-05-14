@@ -86,7 +86,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
   describe('정상: naverPrice > ourPrice', () => {
     it('§8.4 형식의 텍스트 + 절약 금액을 metadata 에 저장', async () => {
       state.productRow = {
-        data: { id: 'p1', name: '슈미트 베개커버', price: 8900 },
+        data: { id: 'p1', store_id: 's1', name: '슈미트 베개커버', price: 8900 },
         error: null,
       }
       state.assetRow = {
@@ -119,7 +119,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
 
     it('콤마 천단위 구분 포맷 (A12 — 8,900원)', async () => {
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 12000 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 12000 },
         error: null,
       }
       state.assetRow = {
@@ -139,7 +139,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
 
     it('lowestPrice 가 숫자 타입이어도 동작', async () => {
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 5000 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 5000 },
         error: null,
       }
       state.assetRow = {
@@ -163,7 +163,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
   describe('에러: 할인 효과 없음 (PRD §10.2)', () => {
     it('naverPrice < ourPrice → throw', async () => {
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 10000 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 10000 },
         error: null,
       }
       state.assetRow = {
@@ -181,7 +181,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
 
     it('naverPrice === ourPrice → throw', async () => {
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 10000 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 10000 },
         error: null,
       }
       state.assetRow = {
@@ -219,7 +219,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
 
     it('price_compare asset 없음 → throw', async () => {
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 8900 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 8900 },
         error: null,
       }
       state.assetRow = { data: null, error: { message: 'not found' } }
@@ -234,7 +234,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
 
     it('lowestPrice 가 metadata 에 없음 → throw', async () => {
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 8900 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 8900 },
         error: null,
       }
       state.assetRow = {
@@ -252,7 +252,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
 
     it('lowestPrice 가 파싱 불가 문자열 → throw', async () => {
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 8900 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 8900 },
         error: null,
       }
       state.assetRow = {
@@ -277,7 +277,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
       process.env.STORE_SHORTNAME = '이건말도안되게긴매장약칭이름값입니다정말로아주아주아주길어요'
 
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 999999 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 999999 },
         error: null,
       }
       state.assetRow = {
@@ -298,7 +298,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
       delete process.env.STORE_SHORTNAME
 
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 8900 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 8900 },
         error: null,
       }
       state.assetRow = {
@@ -323,7 +323,7 @@ describe('generate_price_emphasis_text — PRD §10.2 / §8.4', () => {
   describe('generated_assets 저장', () => {
     it('insert 실패 시 throw', async () => {
       state.productRow = {
-        data: { id: 'p1', name: 'x', price: 8900 },
+        data: { id: 'p1', store_id: 's1', name: 'x', price: 8900 },
         error: null,
       }
       state.assetRow = {

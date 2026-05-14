@@ -27,7 +27,7 @@
  * 참고: AI tool 호출은 잘못된 input 으로 들어올 수 있다. 모든 분기에 명시적 throw.
  */
 
-import { createServiceClient } from '@onword/db'
+import { createServiceClient, type Database } from '@onword/db'
 import type {
   GeneratePriceEmphasisTextInput,
   GeneratePriceEmphasisTextOutput,
@@ -86,6 +86,13 @@ export async function generatePriceEmphasisText(
     throw new Error(`Product price invalid: ${productId}`)
   }
 
+  // store_id 는 generated_assets NOT NULL — products.store_id 에서 복제.
+  // 테스트 fixture 가 store_id 를 안 넘기는 경우 대비 안전 처리.
+  const storeId =
+    typeof (product as { store_id?: unknown }).store_id === 'string'
+      ? ((product as { store_id: string }).store_id)
+      : null
+
   // 2. price_compare asset 조회 — 네이버 가격
   const { data: asset, error: assetError } = await supabase
     .from('generated_assets')
@@ -140,10 +147,16 @@ export async function generatePriceEmphasisText(
   }
 
   // 6. generated_assets 저장 — type='price_emphasis_text'
-  //    (Insert 타입이 모든 nullable 필드를 명시적으로 요구하므로 null 로 채움.)
-  const { data: saved, error: insertError } = await supabase
-    .from('generated_assets')
-    .insert({
+  //    store_id 는 NOT NULL (migrations 0002). product 에서 복제 — null 이면 prod 환경
+  //    에서 RLS / NOT NULL 위반으로 자연 실패 (graceful: 명시 에러 메시지).
+  if (!storeId) {
+    throw new Error(
+      `Product missing store_id (productId=${productId}). RLS / migration 정합 확인 필요.`,
+    )
+  }
+  const insertPayload: Database['public']['Tables']['generated_assets']['Insert'] =
+    {
+      store_id: storeId,
       product_id: productId,
       trace_step_id: _traceId ?? null,
       type: 'price_emphasis_text',
@@ -158,7 +171,10 @@ export async function generatePriceEmphasisText(
       },
       copied_at: null,
       used_at: null,
-    })
+    }
+  const { data: saved, error: insertError } = await supabase
+    .from('generated_assets')
+    .insert(insertPayload)
     .select('id')
     .single()
 

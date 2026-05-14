@@ -20,7 +20,7 @@ interface CampaignsViewProps {
   onNavigate: (tab: DashboardTab) => void
 }
 
-export function CampaignsView({ onNavigate }: CampaignsViewProps) {
+export function CampaignsView(_props: CampaignsViewProps) {
   return (
     <div className="h-full p-6">
       <h2 className="text-2xl font-bold text-zinc-900 tracking-tight mb-6">공구 현황</h2>

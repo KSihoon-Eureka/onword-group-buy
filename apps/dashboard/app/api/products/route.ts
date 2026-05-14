@@ -76,9 +76,12 @@ export async function POST(request: Request) {
   }
 
   // RLS가 store_members 멤버십을 강제하지만, resolveActiveStore에서 이미 확인됨.
-  // `as never` cast: @onword/db Database 타입이 supabase-js v2.105의 __InternalSupabase
-  // 키를 갖지 않아 .from() 추론이 깨짐 (PLAN.md A.10 expected 잔재).
-  // Phase D에서 packages/db Database 재생성 시 제거.
+  //
+  // `as never` cast: @supabase/ssr 0.5.2 ↔ supabase-js 2.105 typing 호환성 이슈.
+  // ssr 의 createServerClient<Database> 가 insert payload 를 `never[]` 로 추론 →
+  // 동일 패턴: apps/dashboard/app/api/saved-flows/route.ts.
+  // (createServiceClient 직접 호출 경로는 정상이지만, 본 route 는 RLS 인증 사용자
+  //  컨텍스트가 필요해 ssr 클라이언트 유지.)
   const { data, error } = await supabase
     .from('products')
     .insert(insertPayload as never)

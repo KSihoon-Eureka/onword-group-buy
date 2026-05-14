@@ -117,22 +117,14 @@
 ## Phase E — Dashboard Secondary Views (E.1-E.7 병렬)
 
 - [x] **E.1** 공구 현황 (`/campaigns`) — Wave E1 (Agent G, 24 tests). ProductCard dumb + 8-stage progress (completed 제외) + filter 탭 + ARIA progressbar.
-- [ ] **E.2** 상품 상세 (`/p/[id]`)
-  - 7-feature action surface
-  - 각 액션 status 표시 (asset 존재 여부 + superseded 처리)
-  - AI 비서 (상품 컨텍스트 주입)
-  - 자산 목록 + 복사 버튼
+- [x] **E.2** 상품 상세 (`/p/[productId]`) — Wave E2 (Agent J, 17 tests). 7-feature action surface (PRD §7.13 + §9.5 합본 매핑) + 활성 asset / running trace / failed 우선순위 + ChatView 재사용 (시그니처 유지) + AssetCard 그리드. ChatView prompt 컨텍스트 주입은 후속 (Phase D dynamic loop).
 - [ ] **E.3** 주문 관리 (`/orders`)
   - Empty state placeholder ("주문 데이터가 곧 추가됨")
   - 구조는 미리 준비 (order-web 출시 시 즉시 활성)
 - [x] **E.4** 자산 (`/assets`) — Wave E1 (Agent H, 19 tests). AssetCard dumb (clipboard + Blob 다운로드) + 카테고리 필터 + 상품별 그룹. copied_at/used_at mutation은 콜백 hook만 (후속 PATCH API task).
 - [x] **E.5** AuditLogPanel (`/audit`) — Wave E1 (Agent I, 32 tests). dumb component + filter dropdown + URL searchParams sync. user_id → user 정보 매핑은 후속 (auth user join API).
-- [ ] **E.6** NotificationCenter (사이드바 🔔)
-  - 최근 audit_log 10건
-  - 새 주문 (Realtime, 미래 활성)
-  - tool 실패 알림
-- [ ] **E.7** SummaryCard (AI 비서 default landing)
-  - 오늘 마감 N / 신규 주문 N / 수령 가능 N / 마감 임박 N
+- [x] **E.6** NotificationCenter — Wave E2 (Agent K, 33 tests). dumb 컴포넌트 + unread badge (99+) + maxItems 10 + 한국어 kind 라벨. Sidebar wiring은 후속 (localStorage / Realtime / dropdown).
+- [x] **E.7** SummaryCard — Wave E2 (Agent K, 23 tests). dumb 4-grid (closingToday/newOrders/pickupReady/deadlineSoon) + 0값 처리 + 콤마 포맷.
 
 ---
 

@@ -4,11 +4,12 @@
  * AgentStepBlock — Execution Trace의 한 단계.
  * 출처: Versatile Execution Agent App.tsx L65-117
  * 변경: 한글 라벨, ToolName 타입 가드 추가
- * 
- * 3가지 상태:
- *   - streaming: 흰 배경 + 그림자 + Loader2 회전
- *   - completed: 회색 배경 + CheckCircle2 + 소요 시간
- *   - error: 회색 배경 + 빨간 라벨 (TODO: 디자인 보강)
+ *
+ * StepStatus 매핑 (packages/types/index.ts):
+ *   - pending → 회색 (대기)
+ *   - running → 흰 배경 + 그림자 + Loader2 회전 (구 'streaming')
+ *   - done    → 회색 배경 + CheckCircle2 + 소요 시간 (구 'completed')
+ *   - error   → 회색 배경 + XCircle (빨강)
  */
 
 import { motion } from 'framer-motion'
@@ -31,8 +32,8 @@ const TOOL_LABELS: Record<string, string> = {
 }
 
 export function AgentStepBlock({ step }: AgentStepBlockProps) {
-  const isStreaming = step.status === 'streaming'
-  const isCompleted = step.status === 'completed'
+  const isStreaming = step.status === 'running'
+  const isCompleted = step.status === 'done'
   const isError = step.status === 'error'
   
   return (
