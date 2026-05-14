@@ -131,6 +131,19 @@ export async function POST(req: Request) {
     .single()
 
   if (traceErr || !trace) {
+    console.error('[api/agent/run] trace_insert_failed:', {
+      message: traceErr?.message,
+      code: traceErr?.code,
+      details: traceErr?.details,
+      hint: traceErr?.hint,
+      payload: {
+        store_id: body.storeId,
+        product_id: body.productId,
+        user_id: user.id,
+        action: body.action,
+        status: 'running',
+      },
+    })
     return NextResponse.json({ error: 'trace_insert_failed' }, { status: 500 })
   }
   const traceId = (trace as { id: string }).id

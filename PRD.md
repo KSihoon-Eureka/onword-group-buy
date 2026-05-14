@@ -739,6 +739,58 @@ using (
 );
 ```
 
+### 4.13.1 GRANT 절차 (Auto-expose OFF 셋업 필수)
+
+Supabase 프로젝트가 *Data API ON / Auto-expose OFF*면 RLS 정책만 있어도 부족 — **role-level GRANT가 별도 필요**. RLS는 "어떤 row 접근 가능"을 결정하지만 *table 자체 접근*은 GRANT에서 결정.
+
+```sql
+-- authenticated (user session, RLS 의해 row 필터링)
+grant select, insert, update on public.{table} to authenticated;
+
+-- service_role (RLS 우회, 코드 레벨 store_id 필터링 강제)
+grant select, insert, update on public.{table} to service_role;
+
+-- sequence usage (id default gen_random_uuid() 안 쓰면 불필요지만 안전)
+grant usage on all sequences in schema public to service_role;
+```
+
+**DELETE는 GRANT 안 함** (archive only — PRD §2.10).
+
+**누락 시 증상**: PostgreSQL error 42501 `permission denied for table {name}` — RLS 정책 통과해도 GRANT 없으면 거부.
+
+**참조**: 0006_service_role_grants.sql 마이그레이션 (Phase C.5 agent_traces 누락 사건 영구화).
+
+### 4.13.2 재귀 RLS 회피
+
+RLS 정책이 *자기 테이블*을 SELECT하면 무한 재귀 (PostgreSQL stack overflow). 흔한 케이스: `store_members` RLS 정책이 `store_members` 자체 조회.
+
+**회피 패턴 1 — SECURITY DEFINER 함수**:
+```sql
+create function is_store_member(_store_id uuid, _user_id uuid)
+returns boolean
+language sql
+security definer  -- 호출자 권한 무시, 정의자(superuser) 권한으로 실행 → RLS 우회
+stable
+as $$
+  select exists (
+    select 1 from store_members
+    where store_id = _store_id and user_id = _user_id
+  );
+$$;
+
+create policy "members can read"
+on products for select to authenticated
+using (is_store_member(products.store_id, auth.uid()));
+```
+
+**회피 패턴 2 — store_members 자체는 단순 정책**:
+```sql
+-- store_members 자체 RLS는 자기 참조 X
+create policy "users see own memberships"
+on store_members for select to authenticated
+using (user_id = auth.uid());
+```
+
 ## 4.14 데이터 보유 정책
 
 | 테이블 | 보존 | 예외 |

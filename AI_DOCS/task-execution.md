@@ -442,6 +442,21 @@ prompt에 사용된 *모든 식별자*가 codebase에 존재하는지 확인:
 - API route shape → PRD §15.1과 일치
 - task / tool 카운트 → PRD §10 (tool 이름 수) vs PLAN.md (task ID 수) 구별
 
+[Enum 추가 시 모든 동기화 위치 체크리스트 (Phase C 학습 — 6 layer)]
+새 enum 값(action / tool / flow_stage / asset_type 등) 추가는 *6 위치 모두* 동기화:
+1. `packages/types/index.ts` — TypeScript union type
+2. `PRD.md` — 도메인 명세 (해당 §4.x 또는 §10 코멘트)
+3. `supabase/migrations/*.sql` — DB CHECK constraint (예: traces_action_valid)
+4. `supabase/migrations/*.sql` — service_role + authenticated GRANT (PRD §4.13.1)
+5. RLS 정책 — 새 enum이 정책 식에 등장 시
+6. `AI_DOCS/*.md` — 참조 문서 (workflow, kakao-text-format 등)
+
+**누락 사례 (Phase C 2026-05-13)**:
+- free_text 추가 시 (1)(2)는 코디네이터 cascading commit으로 박았지만 (3) CHECK constraint 누락 → `permission denied check constraint` 발생
+- (4) service_role GRANT 누락 → `permission denied for table agent_traces` (42501) 발생
+- 두 누락 모두 *시각 검증 단계*에서 발견 (L3 작동 — 워커 시각 + dev log)
+- 영구화: Migration 0005 (CHECK), 0006 (GRANT), PRD §4.13.1 (GRANT 절차 + 재귀 RLS), 본 체크리스트
+
 모순 발견 시:
 - 옵션 A (cascading 정식): 사용자 명시 승인 → packages/types / PRD 수정 → 그 후 prompt 발행
 - 옵션 B (prompt 변경): 해당 식별자를 codebase 기존 것으로 대체 또는 prompt에서 제거
