@@ -154,6 +154,13 @@
 - [ ] **S.3** 모바일 dashboard 최적화
 - [ ] **S.4** AI가 자주 쓰는 명령 패턴 학습 → saved_flows 자동 제안
 - [ ] **S.5** Sidebar 메뉴 nav `<a href>` → `next/link` `<Link>` 마이그레이션 (UX 개선 — prefetch + client-side navigation. Phase B W2가 `<a>` 사용했음, blocking 아니지만 정통 패턴 아님)
+- [ ] **S.6** **Customization 페이지** (Phase F+ 또는 별도 Phase G)
+  - 사장님이 직접 공고 텍스트 형식 / 포스터 레이아웃을 customize 할 수 있는 UI
+  - 현재는 PRD §8 (카톡 텍스트 표준) + AI_DOCS/poster-composition.md 의 고정 템플릿 사용
+  - 매장별로 brand 색상, 폰트, 이모지 스타일, 텍스트 어조 (반말/존댓말/오픈톤) 등 설정
+  - `stores` 테이블에 customization JSONB 컬럼 추가 → `generate_announcement` / `compose_poster` 가 store config 읽고 prompt/sharp layout 조정
+  - 데이터 모델: `stores.brand_config` (이미 존재 가능) 확장 또는 신규 `store_templates` 테이블
+  - Phase B/C 작업 시점에 idea 인지됨 (2026-05-14 데모 직전 시각 검증 중) — manager 가 announcement 어조 / poster 레이아웃 직접 바꿀 필요 명확
 
 ---
 
