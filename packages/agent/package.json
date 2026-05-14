@@ -7,7 +7,8 @@
   "exports": {
     ".": "./tools.ts",
     "./orchestrator": "./orchestrator.ts",
-    "./tools/*": "./tools/*.ts"
+    "./tools/*": "./tools/*.ts",
+    "./cron/*": "./cron/*.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
