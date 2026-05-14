@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { LogOut } from 'lucide-react'
 import type { Store } from '@onword/types'
 import { cn } from './cn'
@@ -55,9 +56,10 @@ export function Sidebar({
         {MENU_ITEMS.map((item) => {
           const active = isMenuActive(activePath, item.path)
           return (
-            <a
+            <Link
               key={item.path}
               href={item.path}
+              prefetch
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'w-full flex items-center gap-3 px-4 py-3 rounded-full text-[14px] font-medium transition-all',
@@ -68,7 +70,7 @@ export function Sidebar({
             >
               <span className="text-[16px] leading-none">{item.emoji}</span>
               <span>{item.label}</span>
-            </a>
+            </Link>
           )
         })}
       </nav>
