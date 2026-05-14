@@ -77,11 +77,11 @@
   - 6장 이미지 그리드, 선택 / 메인 지정
   - 직접 업로드 fallback (Supabase Storage 직접)
   - Submit → `products` insert → "공구 시작" 옵션 토스트
-- [ ] **C.2** `ChatView.tsx` (`/` 페이지, AI 비서)
+- [x] **C.2** `ChatView.tsx` (`/` 페이지, AI 비서)
   - 메시지 input + history
   - Empty state에 SavedFlows 렌더링
   - 새 대화 버튼 (chat 초기화)
-- [ ] **C.3** `SavedFlows.tsx` (`packages/ui/`)
+- [x] **C.3** `SavedFlows.tsx` (`packages/ui/`)
   - 그리드 (run_count desc 정렬)
   - 클릭 → input fill (자동 전송 안 함)
   - 새 플로우 저장 버튼 + 모달

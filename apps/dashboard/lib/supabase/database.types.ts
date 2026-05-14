@@ -33,6 +33,20 @@ interface StoreMemberRow {
   joined_at: string
 }
 
+interface SavedFlowRow {
+  id: string
+  store_id: string
+  user_id: string
+  name: string
+  prompt: string
+  icon: string | null
+  display_order: number
+  run_count: number
+  last_run_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Database {
   public: BaseDatabase['public'] & {
     Tables: BaseDatabase['public']['Tables'] & {
@@ -48,6 +62,35 @@ export interface Database {
         Row: StoreMemberRow
         Insert: StoreMemberRow
         Update: Partial<StoreMemberRow>
+      }
+      saved_flows: {
+        Row: SavedFlowRow
+        Insert: {
+          id?: string
+          store_id: string
+          user_id: string
+          name: string
+          prompt: string
+          icon?: string | null
+          display_order?: number
+          run_count?: number
+          last_run_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          user_id?: string
+          name?: string
+          prompt?: string
+          icon?: string | null
+          display_order?: number
+          run_count?: number
+          last_run_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
       }
     }
   }
