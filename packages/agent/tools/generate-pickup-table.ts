@@ -94,7 +94,7 @@ interface ProductRow {
 // =====================================================
 
 export async function generatePickupTable(
-  input: GeneratePickupTableInput & { _traceId?: string },
+  input: GeneratePickupTableInput & { _traceId?: string; _traceStepId?: string },
 ): Promise<GeneratePickupTableOutput> {
   // 1. 입력 검증
   if (!input || !input.storeId) {
@@ -141,7 +141,7 @@ export async function generatePickupTable(
   const imageAssetId = await insertAsset(supabase, {
     store_id: input.storeId,
     product_id: null,
-    trace_step_id: input._traceId ?? null,
+    trace_step_id: input._traceStepId ?? null,
     type: 'pickup_table_image',
     asset_url: imageUrl,
     content: null,
@@ -157,7 +157,7 @@ export async function generatePickupTable(
   const textAssetId = await insertAsset(supabase, {
     store_id: input.storeId,
     product_id: null,
-    trace_step_id: input._traceId ?? null,
+    trace_step_id: input._traceStepId ?? null,
     type: 'pickup_table_text',
     asset_url: null,
     content: PICKUP_TABLE_COMPANION_TEXT,

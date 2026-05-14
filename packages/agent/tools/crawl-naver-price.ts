@@ -55,7 +55,7 @@ const CAPTCHA_PATTERNS = [
 // =====================================================
 
 export async function crawlNaverPrice(
-  input: CrawlNaverPriceInput & { _traceId?: string },
+  input: CrawlNaverPriceInput & { _traceId?: string; _traceStepId?: string },
 ): Promise<CrawlNaverPriceOutput> {
   // ---- input validation
   if (!input.productName || input.productName.trim().length === 0) {
@@ -110,7 +110,7 @@ export async function crawlNaverPrice(
     // ---- 5. generated_assets 저장 — 2건 (data + image)
     const dataId = await saveAsset(supabase, {
       productId: null,
-      traceStepId: input._traceId ?? null,
+      traceStepId: input._traceStepId ?? null,
       type: 'price_compare_data',
       assetUrl: null,
       content: JSON.stringify(data),
@@ -119,7 +119,7 @@ export async function crawlNaverPrice(
 
     const imageId = await saveAsset(supabase, {
       productId: null,
-      traceStepId: input._traceId ?? null,
+      traceStepId: input._traceStepId ?? null,
       type: 'price_compare_image',
       assetUrl: imageUrl,
       content: null,

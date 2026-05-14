@@ -78,13 +78,13 @@ interface StoreRow {
 // =====================================================
 
 export async function composePoster(
-  input: ComposePosterInput & { _traceId?: string },
+  input: ComposePosterInput & { _traceId?: string; _traceStepId?: string },
 ): Promise<ComposePosterOutput> {
   // 1. 입력 검증
   if (!input || !input.productId) {
     throw new Error('productId is required')
   }
-  const { productId, baseImageUrl: explicitUrl, textOverlay, _traceId } = input
+  const { productId, baseImageUrl: explicitUrl, textOverlay, _traceStepId } = input
 
   const supabase = createServiceClient()
 
@@ -119,17 +119,25 @@ export async function composePoster(
     )
   }
 
-  // 6. base image 메타 검증
+  // 6. base image 메타 검증.
+  // 너무 작은 이미지는 upscale 시 화질 저하 — 경고만 하고 진행 (데모 안정성 우선).
+  // 너무 작아 sharp 가 처리 못 하는 수준 (< 100px) 만 throw.
   const meta = await sharp(baseImageBuffer).metadata()
-  if (!meta.width || meta.width < MIN_IMAGE_WIDTH) {
+  if (!meta.width || meta.width < 100) {
     throw new Error(
-      `Base image too small: width=${meta.width ?? 'unknown'}px (min ${MIN_IMAGE_WIDTH}px)`,
+      `Base image too small to process: width=${meta.width ?? 'unknown'}px (min 100px)`,
+    )
+  }
+  if (meta.width < MIN_IMAGE_WIDTH) {
+    console.warn(
+      `[compose_poster] base image width=${meta.width}px < ${MIN_IMAGE_WIDTH}px — upscaling (may reduce quality)`,
     )
   }
 
-  // 7. 중앙 상품 이미지 리사이즈
+  // 7. 중앙 상품 이미지 리사이즈 (upscale 허용).
+  // withoutEnlargement: false (default) — 작은 이미지도 POSTER_WIDTH 까지 확대.
   const centerImage = await sharp(baseImageBuffer)
-    .resize(POSTER_WIDTH, IMAGE_HEIGHT, { fit: 'cover' })
+    .resize(POSTER_WIDTH, IMAGE_HEIGHT, { fit: 'cover', withoutEnlargement: false })
     .toBuffer()
 
   // 8. 상단 배너 (입고/수령 마감일)
@@ -172,7 +180,7 @@ export async function composePoster(
     .insert({
       store_id: store.id,
       product_id: productId,
-      trace_step_id: _traceId ?? null,
+      trace_step_id: _traceStepId ?? null,
       type: 'poster',
       asset_url: posterUrl,
       metadata: {

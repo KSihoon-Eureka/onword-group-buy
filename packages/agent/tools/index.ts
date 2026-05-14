@@ -31,6 +31,7 @@ import { composePoster } from './compose-poster'
 import { generatePickupTable } from './generate-pickup-table'
 import { getOrders } from './get-orders'
 import { notifyWholesaler } from './notify-wholesaler'
+import { listRecentActivity } from './list-recent-activity'
 
 // =====================================================
 // ToolContext / ToolHandler
@@ -38,6 +39,12 @@ import { notifyWholesaler } from './notify-wholesaler'
 
 export interface ToolContext {
   traceId: string
+  /**
+   * 현재 step 의 ID (orchestrator 가 chain 루프 안에서 step 별로 set).
+   * tool 이 자산을 저장할 때 trace_step_id FK 로 사용.
+   * trace_id 와 다른 값 — generated_assets.trace_step_id 는 trace_steps.id 를 참조.
+   */
+  traceStepId: string | null
   storeId: string
   productId: string | null
   userId: string | null
@@ -73,7 +80,11 @@ function injectCtx(
 ): Record<string, unknown> {
   const meta: InjectedMeta = {}
   if (!('_traceId' in input)) meta._traceId = ctx.traceId
-  if (!('_traceStepId' in input)) meta._traceStepId = ctx.traceId
+  // _traceStepId 는 ctx.traceStepId 사용 (trace_id 가 아님!).
+  // null 이면 자산이 trace_step 과 연결 안 됨 — orchestrator 가 step INSERT 후 채우는 게 정상.
+  if (!('_traceStepId' in input) && ctx.traceStepId != null) {
+    meta._traceStepId = ctx.traceStepId
+  }
   if (!('_userId' in input)) meta._userId = ctx.userId
   return { ...meta, ...input }
 }
@@ -125,6 +136,7 @@ export const TOOL_REGISTRY: Record<ToolName, ToolHandler> = {
   generate_pickup_table: makeHandler(generatePickupTable),
   get_orders: makeHandler(getOrders),
   notify_wholesaler: makeHandler(notifyWholesaler),
+  list_recent_activity: makeHandler(listRecentActivity),
 }
 
 export const TOOL_NAMES: readonly ToolName[] = Object.keys(
@@ -252,6 +264,20 @@ export const TOOL_SCHEMAS: Anthropic.Tool[] = [
         recipientOverride: { type: 'string' },
       },
       required: ['productId'],
+    },
+  },
+  {
+    name: 'list_recent_activity',
+    description:
+      '매장의 최근 활동 이력 조회 (agent_traces + audit_log 통합). "지난주 뭐 했지?" / "오늘 활동" 같은 자연어 질문에 사용. read-only.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        storeId: { type: 'string' },
+        days: { type: 'number', description: '최근 N 일. default 7. max 30.' },
+        limit: { type: 'number', description: '최대 결과 수. default 20. max 50.' },
+      },
+      required: ['storeId'],
     },
   },
 ]

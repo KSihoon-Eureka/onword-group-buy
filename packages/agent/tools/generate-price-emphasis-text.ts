@@ -65,9 +65,9 @@ function formatWon(n: number): string {
 // ──────────────────────────────────────────────────────────────────────────
 
 export async function generatePriceEmphasisText(
-  input: GeneratePriceEmphasisTextInput & { _traceId?: string },
+  input: GeneratePriceEmphasisTextInput & { _traceId?: string; _traceStepId?: string },
 ): Promise<GeneratePriceEmphasisTextOutput> {
-  const { productId, priceCompareAssetId, _traceId } = input
+  const { productId, priceCompareAssetId, _traceStepId } = input
   const supabase = createServiceClient()
 
   // 1. 상품 조회 — 우리 가격
@@ -158,7 +158,7 @@ export async function generatePriceEmphasisText(
     {
       store_id: storeId,
       product_id: productId,
-      trace_step_id: _traceId ?? null,
+      trace_step_id: _traceStepId ?? null,
       type: 'price_emphasis_text',
       stage: null,
       content,

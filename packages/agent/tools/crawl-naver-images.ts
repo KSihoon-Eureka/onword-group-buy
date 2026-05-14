@@ -63,7 +63,7 @@ const CAPTCHA_PATTERNS = [
 // =====================================================
 
 export async function crawlNaverImages(
-  input: CrawlNaverImagesInput & { _traceId?: string },
+  input: CrawlNaverImagesInput & { _traceId?: string; _traceStepId?: string },
 ): Promise<CrawlNaverImagesOutput> {
   // ---- input validation
   if (!input.productId) {
@@ -158,7 +158,7 @@ export async function crawlNaverImages(
         .from('generated_assets')
         .insert({
           product_id: input.productId,
-          trace_step_id: input._traceId ?? null,
+          trace_step_id: input._traceStepId ?? null,
           type: 'product_image',
           asset_url: storageUrl,
           metadata: {

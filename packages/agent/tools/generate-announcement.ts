@@ -78,9 +78,9 @@ interface ProductRow {
 // =====================================================
 
 export async function generateAnnouncement(
-  input: GenerateAnnouncementInput & { _traceId?: string },
+  input: GenerateAnnouncementInput & { _traceId?: string; _traceStepId?: string },
 ): Promise<GenerateAnnouncementOutput> {
-  const { stage, storeId, _traceId } = input
+  const { stage, storeId, _traceStepId } = input
 
   if (stage !== 1 && stage !== 2 && stage !== 3) {
     throw new Error(`Invalid stage: ${String(stage)}. Must be 1, 2, or 3.`)
@@ -131,7 +131,7 @@ export async function generateAnnouncement(
   const assetId = await saveAsset(supabase, {
     storeId,
     productId: primaryProductId,
-    traceStepId: _traceId ?? null,
+    traceStepId: _traceStepId ?? null,
     type: STAGE_TO_ASSET_TYPE[stage],
     stage,
     content,

@@ -45,13 +45,14 @@ export type AssetType =
 
 export type ToolName =
   | 'generate_announcement'
-  | 'generate_price_emphasis_text'  // NEW
-  | 'crawl_naver_images'             // NEW (분리됨)
+  | 'generate_price_emphasis_text'
+  | 'crawl_naver_images'
   | 'crawl_naver_price'
   | 'compose_poster'
   | 'generate_pickup_table'
   | 'get_orders'
   | 'notify_wholesaler'
+  | 'list_recent_activity'  // dynamic agent read tool — 최근 trace + audit_log
 
 export type ActionName =
   | 'start_campaign'         // Step 2-4
