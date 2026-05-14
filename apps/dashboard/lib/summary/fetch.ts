@@ -13,7 +13,6 @@
 import type { SummaryStats } from '@onword/ui'
 
 // supabase-js / ssr 의 Database generic 충돌 회피 — any 로 받음.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseLike = any
 
 function todayKstIsoDate(): string {

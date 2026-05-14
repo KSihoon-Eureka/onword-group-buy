@@ -14,7 +14,6 @@
 import type { NotificationItem } from '@onword/ui'
 
 // supabase-js / ssr 의 Database generic 충돌 회피 — any 로 받음.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseLike = any
 
 const MAX_AUDIT = 10
@@ -56,7 +55,6 @@ export async function fetchSidebarNotifications(
   storeId: string,
 ): Promise<NotificationItem[]> {
   // 1. audit_log
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const auditBuilder: any = supabase.from('audit_log').select(
     'id, created_at, action, entity_type, entity_id, summary',
   )
@@ -69,7 +67,6 @@ export async function fetchSidebarNotifications(
   }
 
   // 2. agent_traces (failed)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const traceBuilder: any = supabase
     .from('agent_traces')
     .select('id, product_id, action, error_message, started_at, completed_at')
