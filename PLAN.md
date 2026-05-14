@@ -116,10 +116,7 @@
 
 ## Phase E — Dashboard Secondary Views (E.1-E.7 병렬)
 
-- [ ] **E.1** 공구 현황 (`/campaigns` or 기본 view)
-  - ProductCard 그리드
-  - flow_stage 8-stage progress dots
-  - 필터 (active / archived / 전체)
+- [x] **E.1** 공구 현황 (`/campaigns`) — Wave E1 (Agent G, 24 tests). ProductCard dumb + 8-stage progress (completed 제외) + filter 탭 + ARIA progressbar.
 - [ ] **E.2** 상품 상세 (`/p/[id]`)
   - 7-feature action surface
   - 각 액션 status 표시 (asset 존재 여부 + superseded 처리)
@@ -128,13 +125,8 @@
 - [ ] **E.3** 주문 관리 (`/orders`)
   - Empty state placeholder ("주문 데이터가 곧 추가됨")
   - 구조는 미리 준비 (order-web 출시 시 즉시 활성)
-- [ ] **E.4** 자산 (`/assets`)
-  - 모든 generated_assets 목록 (superseded 제외 default)
-  - 타입별 필터, 상품별 그룹
-  - 복사 버튼 (텍스트), 다운로드 (이미지)
-- [ ] **E.5** AuditLogPanel (`/audit` 또는 ProductDetail 내)
-  - 시간 역순
-  - 매장 전체 또는 product별
+- [x] **E.4** 자산 (`/assets`) — Wave E1 (Agent H, 19 tests). AssetCard dumb (clipboard + Blob 다운로드) + 카테고리 필터 + 상품별 그룹. copied_at/used_at mutation은 콜백 hook만 (후속 PATCH API task).
+- [x] **E.5** AuditLogPanel (`/audit`) — Wave E1 (Agent I, 32 tests). dumb component + filter dropdown + URL searchParams sync. user_id → user 정보 매핑은 후속 (auth user join API).
 - [ ] **E.6** NotificationCenter (사이드바 🔔)
   - 최근 audit_log 10건
   - 새 주문 (Realtime, 미래 활성)
