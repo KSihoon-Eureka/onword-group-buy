@@ -21,7 +21,8 @@ import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Bot, Package } from 'lucide-react'
-import { AssetCard, type AssetCardData } from '@onword/ui'
+import { type AssetCardData } from '@onword/ui'
+import { AssetCardWithCopy } from '@/components/assets/AssetCardWithCopy'
 import type { Product } from '@onword/types'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { ACTIVE_STORE_COOKIE } from '@/lib/supabase/middleware'
@@ -108,6 +109,7 @@ type AgentTraceRow = {
   status: string
   started_at: string
   completed_at: string | null
+  error_message: string | null
 }
 
 function formatPriceKRW(n: number): string {
@@ -173,7 +175,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   // 3. agent_traces — 최근 20건이면 action별 상태 산출에 충분
   const { data: traceData } = await supabase
     .from('agent_traces')
-    .select('id, action, status, started_at, completed_at')
+    .select('id, action, status, started_at, completed_at, error_message')
     .eq('store_id', storeId)
     .eq('product_id', params.productId)
     .order('started_at', { ascending: false })
@@ -184,6 +186,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
     status: t.status as TraceLite['status'],
     startedAt: t.started_at,
     completedAt: t.completed_at,
+    errorMessage: t.error_message,
   }))
 
   const assetLites: AssetLite[] = assets.map((a) => ({
@@ -350,7 +353,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {assetCards.map((card) => (
-              <AssetCard key={card.id} asset={card} />
+              <AssetCardWithCopy key={card.id} asset={card} />
             ))}
           </div>
         )}

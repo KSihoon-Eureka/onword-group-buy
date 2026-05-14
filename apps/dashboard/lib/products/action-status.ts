@@ -41,8 +41,13 @@ export interface FeatureDefinition {
 }
 
 /**
- * PRD §9.5 의 7 feature 정의.
+ * PRD §9.5 의 feature 정의.
  * 순서 = grid 표시 순서.
+ *
+ * NOTE: 'wholesale' (도매주문) 은 사용자 결정으로 UI 에서 숨김 (옵션 B).
+ *   - ActionName enum / packages/agent/tools/notify-wholesaler.ts / DB CHECK 는 유지
+ *   - 나중에 복구하려면 이 배열에 다시 추가하면 됨
+ *   - 백엔드는 그대로 작동 (수동 API 호출 시 응답)
  */
 export const FEATURE_DEFINITIONS: ReadonlyArray<FeatureDefinition> = [
   {
@@ -52,20 +57,9 @@ export const FEATURE_DEFINITIONS: ReadonlyArray<FeatureDefinition> = [
     action: 'start_campaign',
     assetTypes: ['announcement_stage1'],
   },
-  {
-    id: 'images',
-    label: '이미지',
-    description: '네이버 상품 이미지 자동 크롤',
-    action: 'start_campaign',
-    assetTypes: ['product_image'],
-  },
-  {
-    id: 'price',
-    label: '가격',
-    description: '네이버 가격 스크린샷 + 강조 카톡',
-    action: 'start_campaign',
-    assetTypes: ['price_compare_image', 'price_compare_data', 'price_emphasis_text'],
-  },
+  // NOTE: 'images', 'price' 카드는 네이버 크롤 의존으로 일단 숨김 (Phase F 내일 데모 후 복구).
+  //   - packages/agent/tools/crawl-naver-* 는 그대로 존재
+  //   - orchestrator ACTION_CHAIN 에서도 빠짐 (아래 Fix 2)
   {
     id: 'poster',
     label: '포스터',
@@ -79,13 +73,6 @@ export const FEATURE_DEFINITIONS: ReadonlyArray<FeatureDefinition> = [
     description: '수령일 비교 테이블 (5일)',
     action: 'close_orders',
     assetTypes: ['pickup_table_image', 'pickup_table_text'],
-  },
-  {
-    id: 'wholesale',
-    label: '도매주문',
-    description: '도매업자 이메일 발송',
-    action: 'notify_warehouse',
-    assetTypes: ['wholesale_email'],
   },
   {
     id: 'pickup_announce',
@@ -110,6 +97,8 @@ export interface TraceLite {
   status: TraceStatus
   startedAt: string
   completedAt: string | null
+  /** 실패 시 error_message (UI 표시용). optional — 기존 호출자 호환. */
+  errorMessage?: string | null
 }
 
 export interface FeatureState {
@@ -117,6 +106,8 @@ export interface FeatureState {
   status: FeatureStatus
   /** 매핑된 활성(non-superseded) asset 개수 — completed 판정 근거 표시용 */
   assetCount: number
+  /** 실패 카드용 친절 메시지. status='failed' 일 때만 설정. */
+  friendlyError?: string
 }
 
 /**
@@ -176,11 +167,55 @@ export function computeFeatureStates(input: {
       return { definition, status: 'running' as const, assetCount: 0 }
     }
     if (latest.status === 'failed') {
-      return { definition, status: 'failed' as const, assetCount: 0 }
+      return {
+        definition,
+        status: 'failed' as const,
+        assetCount: 0,
+        friendlyError: humanizeError(latest.errorMessage ?? null),
+      }
     }
     // completed / cancelled → asset 없음이면 idle
     return { definition, status: 'idle' as const, assetCount: 0 }
   })
+}
+
+/**
+ * orchestrator/tool 의 raw error message 를 사용자 친화 한국어로 변환.
+ * 알려진 패턴은 친절 문구로, 그 외는 짧게 truncate.
+ */
+export function humanizeError(raw: string | null): string {
+  if (!raw) return '실행 중 오류가 발생했습니다.'
+  // tool prefix 제거 (예: "generate_announcement: ...")
+  const colonIdx = raw.indexOf(':')
+  const detail = colonIdx >= 0 ? raw.slice(colonIdx + 1).trim() : raw
+
+  // 알려진 패턴 매핑.
+  if (/표시할 상품 없음/.test(detail)) {
+    if (/픽업 가능 상품 0건/.test(detail)) {
+      return '오늘 픽업 가능한 상품이 없습니다.'
+    }
+    if (/수령 가능한 상품이 0건/.test(detail)) {
+      return '수령 가능한 상품이 없습니다. (진행 중 + 픽업일 ≤ 5일 후)'
+    }
+    return '표시할 상품이 없습니다.'
+  }
+  if (/Could not resolve authentication/i.test(detail)) {
+    return 'Anthropic API key 설정이 필요합니다.'
+  }
+  if (/productName is required|productId is required/i.test(detail)) {
+    return '상품 정보가 부족합니다. 상품을 다시 확인해주세요.'
+  }
+  if (/permission denied/i.test(detail) || /42501/.test(detail)) {
+    return '권한이 부족합니다. 관리자에게 문의해주세요.'
+  }
+  if (/foreign key constraint/i.test(detail)) {
+    return '데이터 연결 오류가 발생했습니다.'
+  }
+  if (/insufficient_quota|rate.?limit|429/i.test(detail)) {
+    return 'AI 호출 한도에 도달했습니다. 잠시 후 다시 시도해주세요.'
+  }
+  // fallback: 80자로 잘라서 표시.
+  return detail.length > 80 ? detail.slice(0, 80) + '…' : detail
 }
 
 /**

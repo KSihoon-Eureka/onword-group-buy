@@ -148,8 +148,38 @@ export async function POST(req: Request) {
   }
   const traceId = (trace as { id: string }).id
 
-  // 5. Orchestrator fire-and-forget — 백그라운드로 실행.
-  // 실패 시 orchestrator 가 agent_traces.status='failed' 마킹 + console.error.
+  // 5. Orchestrator 실행.
+  // free_text 는 동기 await — Claude tool_use loop 결과 (finalMessage) 를 응답에 포함.
+  // 정적 chain 은 fire-and-forget — 클라이언트가 trace 상태 polling 또는 Realtime 으로 확인.
+  if (body.action === 'free_text') {
+    try {
+      const result = await runAgent({
+        traceId,
+        storeId: body.storeId,
+        action: body.action,
+        productId: body.productId,
+        productIds: body.productIds ?? undefined,
+        userId: user.id,
+        message: body.message ?? undefined,
+      })
+      return NextResponse.json(
+        {
+          traceId,
+          status: result.completed ? 'completed' : 'failed',
+          finalMessage: result.finalMessage ?? null,
+        },
+        { status: 200 },
+      )
+    } catch (err) {
+      console.error('[api/agent/run] orchestrator failed (free_text):', err)
+      return NextResponse.json(
+        { traceId, status: 'failed', error: 'orchestrator_failed' },
+        { status: 500 },
+      )
+    }
+  }
+
+  // 정적 chain — fire-and-forget.
   void runAgent({
     traceId,
     storeId: body.storeId,
@@ -162,6 +192,5 @@ export async function POST(req: Request) {
     console.error('[api/agent/run] orchestrator failed:', err)
   })
 
-  // 6. 즉시 응답.
   return NextResponse.json({ traceId, status: 'started' }, { status: 200 })
 }

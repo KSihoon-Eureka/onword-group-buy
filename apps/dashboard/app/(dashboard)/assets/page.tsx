@@ -19,7 +19,8 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { FolderOpen } from 'lucide-react'
-import { AssetCard, type AssetCardData } from '@onword/ui'
+import { type AssetCardData } from '@onword/ui'
+import { AssetCardWithCopy } from '@/components/assets/AssetCardWithCopy'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { ACTIVE_STORE_COOKIE } from '@/lib/supabase/middleware'
 import {
@@ -215,7 +216,7 @@ export default async function AssetsPage({ searchParams }: PageProps) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {group.cards.map((card) => (
-                  <AssetCard key={card.id} asset={card} />
+                  <AssetCardWithCopy key={card.id} asset={card} />
                 ))}
               </div>
             </section>

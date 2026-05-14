@@ -131,6 +131,16 @@ export function ActionSurface({ storeId, productId, features }: ActionSurfacePro
                 {f.definition.description}
               </p>
 
+              {f.status === 'failed' && f.friendlyError && (
+                <p
+                  className="text-[11px] text-red-700 bg-red-50 border border-red-100 rounded-lg px-2 py-1.5"
+                  role="alert"
+                  title={f.friendlyError}
+                >
+                  {f.friendlyError}
+                </p>
+              )}
+
               <button
                 type="button"
                 onClick={() => void handleRun(f.definition.action, f.definition.id)}

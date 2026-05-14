@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import type { Store } from '@onword/types'
 import { cn } from './cn'
 import { StoreSwitcher } from './StoreSwitcher'
@@ -71,19 +71,6 @@ export function Sidebar({
             </a>
           )
         })}
-
-        <div className="my-3 mx-4 border-t border-black/[0.04]" />
-
-        <button
-          type="button"
-          onClick={() => {
-            /* NotificationCenter는 Phase E.6에서 wire — 자리만 잡음 */
-          }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-full text-[14px] font-medium text-zinc-500 hover:bg-black/[0.04] hover:text-black transition-all"
-        >
-          <Bell size={16} strokeWidth={2} />
-          <span>알림</span>
-        </button>
       </nav>
 
       <div className="mt-4 pt-4 border-t border-black/[0.04] px-4">

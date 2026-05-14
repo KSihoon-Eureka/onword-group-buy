@@ -13,7 +13,9 @@ import { redirect } from 'next/navigation'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { ACTIVE_STORE_COOKIE } from '@/lib/supabase/middleware'
 import { rowToSavedFlow, type SavedFlowRow } from '@/lib/saved-flows/serialize'
+import { fetchSummaryStats } from '@/lib/summary/fetch'
 import { ChatView } from '@/components/views/ChatView'
+import { SummaryStrip } from '@/components/views/SummaryStrip'
 
 export default async function AIAssistantPage() {
   const supabase = getServerSupabase()
@@ -37,5 +39,14 @@ export default async function AIAssistantPage() {
 
   const flows = ((data ?? []) as SavedFlowRow[]).map(rowToSavedFlow)
 
-  return <ChatView storeId={storeId} initialFlows={flows} />
+  const summaryStats = await fetchSummaryStats(supabase, storeId)
+
+  return (
+    <div className="flex flex-col gap-6 px-4 md:px-8 pt-6 md:pt-8 pb-10">
+      <SummaryStrip stats={summaryStats} />
+      <div className="flex-1 min-h-0">
+        <ChatView storeId={storeId} initialFlows={flows} />
+      </div>
+    </div>
+  )
 }

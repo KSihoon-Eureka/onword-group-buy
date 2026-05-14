@@ -13,10 +13,15 @@
  *  - ExecutionTracePanel 자리 placeholder — C.4 머지 시 컴포넌트 import 교체
  */
 
-import { useState, type KeyboardEvent } from 'react'
+import { useState, useEffect, type KeyboardEvent } from 'react'
 import { Bot, Plus, Send } from 'lucide-react'
 import { SavedFlows } from '@onword/ui'
 import type { SavedFlow } from '@onword/types'
+
+// 탭 이동 후 돌아와도 대화 유지 — sessionStorage 사용 (탭 닫으면 휘발).
+// storeId 별로 분리해서 매장 전환 시 섞이지 않음.
+const SS_MESSAGES_KEY = (storeId: string) => `onword:chat:messages:${storeId}`
+const SS_TRACE_KEY = (storeId: string) => `onword:chat:trace:${storeId}`
 
 interface ChatMessage {
   id: string
@@ -34,6 +39,7 @@ interface ChatViewProps {
 interface RunAgentResponse {
   traceId?: string
   status?: string
+  finalMessage?: string | null
   error?: string
 }
 
@@ -50,8 +56,46 @@ export function ChatView({ storeId, initialFlows }: ChatViewProps) {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [activeTraceId, setActiveTraceId] = useState<string | null>(null)
+  const [hydrated, setHydrated] = useState(false)
 
   const hasConversation = messages.length > 0
+
+  // sessionStorage 에서 hydration (탭 이동 후 복원).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const rawMsgs = window.sessionStorage.getItem(SS_MESSAGES_KEY(storeId))
+      if (rawMsgs) {
+        const parsed = JSON.parse(rawMsgs) as ChatMessage[]
+        if (Array.isArray(parsed)) setMessages(parsed)
+      }
+      const rawTrace = window.sessionStorage.getItem(SS_TRACE_KEY(storeId))
+      if (rawTrace) setActiveTraceId(rawTrace)
+    } catch {
+      // ignore — 잘못된 JSON 이면 그냥 빈 상태로 시작
+    } finally {
+      setHydrated(true)
+    }
+  }, [storeId])
+
+  // messages 변경 시 sessionStorage 저장 (hydration 완료 후만).
+  useEffect(() => {
+    if (!hydrated || typeof window === 'undefined') return
+    try {
+      window.sessionStorage.setItem(SS_MESSAGES_KEY(storeId), JSON.stringify(messages))
+    } catch {
+      // ignore — quota 초과 등
+    }
+  }, [messages, storeId, hydrated])
+
+  useEffect(() => {
+    if (!hydrated || typeof window === 'undefined') return
+    if (activeTraceId) {
+      window.sessionStorage.setItem(SS_TRACE_KEY(storeId), activeTraceId)
+    } else {
+      window.sessionStorage.removeItem(SS_TRACE_KEY(storeId))
+    }
+  }, [activeTraceId, storeId, hydrated])
 
   async function refreshFlows() {
     try {
@@ -114,6 +158,10 @@ export function ChatView({ storeId, initialFlows }: ChatViewProps) {
     setMessages([])
     setActiveTraceId(null)
     setInput('')
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(SS_MESSAGES_KEY(storeId))
+      window.sessionStorage.removeItem(SS_TRACE_KEY(storeId))
+    }
   }
 
   async function handleSend() {
@@ -125,7 +173,7 @@ export function ChatView({ storeId, initialFlows }: ChatViewProps) {
     const placeholder: ChatMessage = {
       id: placeholderId,
       role: 'assistant',
-      content: '실행 시작...',
+      content: '⏳ 생각 중...',
     }
     setMessages((prev) => [...prev, userMsg, placeholder])
     setInput('')
@@ -142,30 +190,33 @@ export function ChatView({ storeId, initialFlows }: ChatViewProps) {
         }),
       })
 
-      if (!res.ok) {
-        const errBody = (await res.json().catch(() => ({}))) as RunAgentResponse
+      const data = (await res.json().catch(() => ({}))) as RunAgentResponse
+      const traceId = data.traceId ?? null
+      if (traceId) setActiveTraceId(traceId)
+
+      if (!res.ok || data.status === 'failed') {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === placeholderId
-              ? { ...m, content: `실행 실패 (${res.status}${errBody.error ? ` · ${errBody.error}` : ''})`, isError: true }
+              ? {
+                  ...m,
+                  content: `실행 실패${data.error ? ` · ${data.error}` : ''}${data.finalMessage ? `\n${data.finalMessage}` : ''}`,
+                  isError: true,
+                  traceId: traceId ?? undefined,
+                }
               : m,
           ),
         )
         return
       }
 
-      const data = (await res.json()) as RunAgentResponse
-      const traceId = data.traceId ?? null
-      if (traceId) setActiveTraceId(traceId)
-
+      // 성공: finalMessage 표시.
       setMessages((prev) =>
         prev.map((m) =>
           m.id === placeholderId
             ? {
                 ...m,
-                content: traceId
-                  ? `실행 시작 (trace: ${traceId.slice(0, 8)}…)`
-                  : '실행 시작...',
+                content: data.finalMessage ?? '응답을 생성하지 못했습니다.',
                 traceId: traceId ?? undefined,
               }
             : m,
@@ -233,11 +284,12 @@ export function ChatView({ storeId, initialFlows }: ChatViewProps) {
                 <div
                   key={msg.id}
                   className={
-                    msg.role === 'user'
+                    (msg.role === 'user'
                       ? 'self-end max-w-[80%] px-4 py-2.5 rounded-3xl bg-black text-white text-[14px]'
                       : msg.isError
                         ? 'self-start max-w-[80%] px-4 py-2.5 rounded-3xl bg-red-50 text-red-700 text-[14px] border border-red-200'
-                        : 'self-start max-w-[80%] px-4 py-2.5 rounded-3xl bg-white text-zinc-800 text-[14px] border border-black/[0.04]'
+                        : 'self-start max-w-[80%] px-4 py-2.5 rounded-3xl bg-white text-zinc-800 text-[14px] border border-black/[0.04]') +
+                    ' whitespace-pre-wrap'
                   }
                 >
                   {msg.content}

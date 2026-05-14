@@ -85,6 +85,10 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
   }
 
   const supabase = getServerSupabase()
+  // current user 가져와서 자기 자신 audit 행에 email 매핑 (다른 멤버는 short hash).
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser()
 
   // audit_log fetch — store_id + 선택적 entity 필터, 시간 역순 limit 100.
   // Phase D 부터 Database 타입에 audit_log 포함되어 직접 from() 가능.
@@ -167,12 +171,28 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
     })
   }
 
+  // userMap: 자기 자신 email + 다른 user 들은 'user-XXXXXXXX' (short hash) 로 표시.
+  // 멀티 멤버 store 에서는 미래에 store_members + auth.users view 로 확장 (S.5+).
+  const userMap: Record<string, { name?: string | null; email?: string | null }> = {}
+  const distinctUserIds = new Set<string>()
+  for (const e of entries) {
+    if (e.userId) distinctUserIds.add(e.userId)
+  }
+  for (const uid of distinctUserIds) {
+    if (currentUser && uid === currentUser.id) {
+      userMap[uid] = { email: currentUser.email ?? null }
+    } else {
+      userMap[uid] = { email: `user-${uid.slice(0, 8)}` }
+    }
+  }
+
   return (
     <div className="px-4 md:px-8 pt-6 md:pt-8 pb-10">
       <AuditPageClient
         entries={entries}
         filter={filter}
         filterOptions={filterOptions}
+        userMap={userMap}
         entityLabelMap={entityLabelMap}
       />
     </div>
