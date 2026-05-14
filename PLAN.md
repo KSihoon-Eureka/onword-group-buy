@@ -105,22 +105,10 @@
 - [x] **D.2** `generate_announcement` (Stage 2 마감 임박) — Wave 1 (Agent A, 단일/다중 분기 포함)
 - [x] **D.3** `generate_announcement` (Stage 3 수령 안내) — Wave 1 (Agent A, 빈 결과 throw + KST 날짜)
 - [x] **D.4** `generate_price_emphasis_text` — Wave 1 (Agent B, 12 tests). PRD §8.4 결정적 템플릿 — Anthropic 미사용.
-- [ ] **D.5** `crawl_naver_images` (NEW — multi-image)
-  - `AI_DOCS/image-crawl.md` 참조
-  - max 6 images, 분류 (product/detail/lifestyle)
-  - rate limit + UA rotation
-  - Supabase Storage 업로드
-- [ ] **D.6** `crawl_naver_price` (분리됨)
-  - 가격 데이터 + 스크린샷
-  - 같은 rate limit 적용
-- [ ] **D.7** `compose_poster`
-  - Sharp + Pretendard 폰트
-  - 800×950 PNG
-  - store.primary_color / accent_color 사용
-- [ ] **D.8** `generate_pickup_table`
-  - SVG → Sharp 렌더링
-  - `AI_DOCS/pickup-table-design.md` 참조
-  - 동반 카톡 텍스트도 생성
+- [x] **D.5** `crawl_naver_images` — Wave 2 (Agent D, 21 tests). max 6 + 분류 휴리스틱 + rate limit + UA rotation + 네이버 차단 throw.
+- [x] **D.6** `crawl_naver_price` — Wave 2 (Agent D, 14 tests). 가격 + 스크린샷. 24h 캐시는 API route 레벨로 분리 (워커 결정, 후속).
+- [x] **D.7** `compose_poster` — Wave 2 (Agent E, 17 tests). 800×950 PNG + store 색상. Pretendard 폰트 F.6 시각 검증으로 위임 (옵션 3).
+- [x] **D.8** `generate_pickup_table` — Wave 2 (Agent E, 15 tests). PRD §13 100% + 동반 카톡 텍스트.
 - [x] **D.9** `get_orders` + db helpers — Wave 1 (Agent C, 20 tests). PIPA phone 마스킹 + phone_access_log + anomaly v1.
 - [ ] **D.10** `notify_wholesaler`
   - Resend API
