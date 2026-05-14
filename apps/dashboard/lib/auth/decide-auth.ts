@@ -23,8 +23,14 @@ export interface DecideAuthInput {
   path: string
 }
 
-const PUBLIC_PATHS = new Set(['/login'])
-const STORE_MEMBER_REQUIRED_EXEMPT = new Set(['/login', '/no-store', '/select-store'])
+// /privacy 는 PIPA 명시 공개 페이지 — 미인증/멤버없음 사용자도 접근 (PRD §6.3 launch 체크).
+const PUBLIC_PATHS = new Set(['/login', '/privacy'])
+const STORE_MEMBER_REQUIRED_EXEMPT = new Set([
+  '/login',
+  '/no-store',
+  '/select-store',
+  '/privacy',
+])
 
 export function decideAuth(input: DecideAuthInput): AuthDecision {
   const { userId, storeIds, activeStoreId, path } = input
