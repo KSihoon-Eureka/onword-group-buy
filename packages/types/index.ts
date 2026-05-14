@@ -55,7 +55,8 @@ export type ToolName =
   | 'list_recent_activity'  // dynamic agent read tool — 최근 trace + audit_log
 
 export type ActionName =
-  | 'start_campaign'         // Step 2-4
+  | 'start_campaign'         // Step 2-4 (= generate_announcement Stage 1)
+  | 'compose_poster'         // 포스터 단독 — 공고와 분리 실행 (UX 요구)
   | 'close_orders'           // Step 6-7
   | 'notify_warehouse'       // Step 8
   | 'announce_pickup'        // Step 9

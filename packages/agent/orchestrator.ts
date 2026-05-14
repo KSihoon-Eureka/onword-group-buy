@@ -57,10 +57,10 @@ export function getAnthropic(): Anthropic {
 export type StaticChainAction = Exclude<ActionName, 'free_text'>
 
 export const ACTION_CHAIN: Record<StaticChainAction, ToolName[]> = {
-  // NOTE: 네이버 크롤 2개 (crawl_naver_images, crawl_naver_price) + generate_price_emphasis_text 는
-  //   내일 데모 우선으로 일단 chain 에서 제외. tool 구현은 유지 (packages/agent/tools/*).
-  //   compose_poster 는 products.primary_image_url (사용자 업로드) 사용으로 작동 가능 (PRD §10.5).
-  start_campaign: ['generate_announcement', 'compose_poster'],
+  // 공고와 포스터는 각각 분리 실행 (UX 요구, 2026-05-15).
+  // 네이버 크롤 2개 + generate_price_emphasis_text 는 UI 숨김 (Phase F+).
+  start_campaign: ['generate_announcement'],
+  compose_poster: ['compose_poster'],
   close_orders: ['get_orders', 'generate_pickup_table'],
   notify_warehouse: ['get_orders', 'notify_wholesaler'],
   announce_pickup: ['generate_announcement'],

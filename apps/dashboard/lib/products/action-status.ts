@@ -64,7 +64,7 @@ export const FEATURE_DEFINITIONS: ReadonlyArray<FeatureDefinition> = [
     id: 'poster',
     label: '포스터',
     description: '800×950 포스터 합성',
-    action: 'start_campaign',
+    action: 'compose_poster',
     assetTypes: ['poster'],
   },
   {

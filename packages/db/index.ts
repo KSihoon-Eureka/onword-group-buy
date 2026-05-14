@@ -46,6 +46,7 @@ export type StepStatusDb = 'pending' | 'running' | 'done' | 'error'
 
 export type ActionDb =
   | 'start_campaign'
+  | 'compose_poster'
   | 'close_orders'
   | 'notify_warehouse'
   | 'announce_pickup'
