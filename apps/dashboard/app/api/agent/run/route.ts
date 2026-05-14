@@ -17,7 +17,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import { runAgent, ACTION_CHAIN } from '@onword/agent/orchestrator'
+import { runAgent, ALL_ACTIONS } from '@onword/agent/orchestrator'
 import { createServiceClient } from '@onword/db'
 import type { ActionName } from '@onword/types'
 import { getServerSupabase } from '../../../../lib/supabase/server'
@@ -31,13 +31,14 @@ interface ValidBody {
   action: ActionName
   productId: string | null
   productIds: string[] | null
+  message: string | null
 }
 
 type ParsedBody =
   | { ok: true; value: ValidBody }
   | { ok: false }
 
-const VALID_ACTIONS = new Set(Object.keys(ACTION_CHAIN)) as Set<string>
+const VALID_ACTIONS: Set<string> = new Set(ALL_ACTIONS)
 
 function parseBody(raw: unknown): ParsedBody {
   if (!raw || typeof raw !== 'object') return { ok: false }
@@ -65,6 +66,12 @@ function parseBody(raw: unknown): ParsedBody {
     productIds = body.productIds as string[]
   }
 
+  let message: string | null = null
+  if ('message' in body && body.message !== undefined && body.message !== null) {
+    if (typeof body.message !== 'string') return { ok: false }
+    message = body.message
+  }
+
   return {
     ok: true,
     value: {
@@ -72,6 +79,7 @@ function parseBody(raw: unknown): ParsedBody {
       action: action as ActionName,
       productId,
       productIds,
+      message,
     },
   }
 }
@@ -136,6 +144,7 @@ export async function POST(req: Request) {
     productId: body.productId,
     productIds: body.productIds ?? undefined,
     userId: user.id,
+    message: body.message ?? undefined,
   }).catch((err) => {
     console.error('[api/agent/run] orchestrator failed:', err)
   })

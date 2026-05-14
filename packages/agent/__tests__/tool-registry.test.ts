@@ -174,6 +174,42 @@ describe('runAgent (Phase C.5 chain mode)', () => {
     expect(toolNames).toEqual(ACTION_CHAIN.start_campaign)
   })
 
+  it('free_text action: 정적 chain 아님 → mock 1 step + trace completed', async () => {
+    const result = await runAgent({
+      traceId: 'trace-ft',
+      storeId: 'store-a',
+      action: 'free_text',
+      message: '오늘 픽업 가능한 상품?',
+      userId: 'u1',
+    })
+
+    expect(result).toEqual({
+      traceId: 'trace-ft',
+      completed: true,
+      failedToolName: null,
+    })
+
+    expect(stepsInsertMock).toHaveBeenCalledTimes(1)
+    const payload = stepsInsertMock.mock.calls[0][0]
+    expect(payload).toMatchObject({
+      trace_id: 'trace-ft',
+      step_order: 1,
+      tool_name: 'free_text',
+      status: 'done',
+    })
+    expect(payload.input).toMatchObject({
+      storeId: 'store-a',
+      message: '오늘 픽업 가능한 상품?',
+    })
+    expect(payload.summary).toContain('Phase D')
+
+    expect(tracesUpdateMock).toHaveBeenCalledWith({
+      payload: expect.objectContaining({ status: 'completed' }),
+      col: 'id',
+      val: 'trace-ft',
+    })
+  })
+
   it('A3 chain failure: handler throw → 즉시 중단 + trace failed', async () => {
     // 첫 번째 tool 만 throw 하도록 임시 monkey-patch.
     const originalHandler = TOOL_REGISTRY.generate_announcement

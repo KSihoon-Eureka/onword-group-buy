@@ -59,13 +59,14 @@ vi.mock('@onword/agent/orchestrator', () => ({
     runAgentMock(...args)
     return Promise.resolve({ traceId: 'trace-uuid-123', completed: true, failedToolName: null })
   },
-  ACTION_CHAIN: {
-    start_campaign: [],
-    close_orders: [],
-    notify_warehouse: [],
-    announce_pickup: [],
-    urgent_alert: [],
-  },
+  ALL_ACTIONS: [
+    'start_campaign',
+    'close_orders',
+    'notify_warehouse',
+    'announce_pickup',
+    'urgent_alert',
+    'free_text',
+  ],
 }))
 
 import { POST } from '../route'
@@ -102,7 +103,18 @@ describe('POST /api/agent/run', () => {
   })
 
   it('400 invalid_input — unknown action', async () => {
-    const req = makeRequest({ storeId: 'store-a', action: 'free_text' })
+    const req = makeRequest({ storeId: 'store-a', action: 'bogus_action' })
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'invalid_input' })
+  })
+
+  it('400 invalid_input — message not a string', async () => {
+    const req = makeRequest({
+      storeId: 'store-a',
+      action: 'free_text',
+      message: 123,
+    })
     const res = await POST(req)
     expect(res.status).toBe(400)
     expect(await res.json()).toEqual({ error: 'invalid_input' })
@@ -176,6 +188,46 @@ describe('POST /api/agent/run', () => {
       action: 'start_campaign',
       productId: 'p1',
       userId: 'u1',
+    })
+  })
+
+  it('200 started — free_text action (productId 없이) + message 전달', async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: 'u1', email: 'a@b.com' } },
+      error: null,
+    })
+    membershipMock.mockResolvedValue(true)
+
+    const req = makeRequest({
+      storeId: 'store-a',
+      action: 'free_text',
+      message: '오늘 픽업 가능한 상품 알려줘',
+    })
+    const res = await POST(req)
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      traceId: 'trace-uuid-123',
+      status: 'started',
+    })
+
+    expect(traceInsertMock).toHaveBeenCalledTimes(1)
+    expect(traceInsertMock.mock.calls[0][0]).toMatchObject({
+      store_id: 'store-a',
+      product_id: null,
+      user_id: 'u1',
+      action: 'free_text',
+      status: 'running',
+    })
+
+    expect(runAgentMock).toHaveBeenCalledTimes(1)
+    expect(runAgentMock.mock.calls[0][0]).toMatchObject({
+      traceId: 'trace-uuid-123',
+      storeId: 'store-a',
+      action: 'free_text',
+      productId: null,
+      userId: 'u1',
+      message: '오늘 픽업 가능한 상품 알려줘',
     })
   })
 })

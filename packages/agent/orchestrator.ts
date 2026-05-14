@@ -50,8 +50,12 @@ export function getAnthropic(): Anthropic {
 // =====================================================
 // Static action → tool chain (PRD §7.13)
 // =====================================================
+// free_text 는 정적 chain 이 아니라 Phase D 의 Claude 동적 tool_use loop 대상.
+// 본 워커는 mock 단일 step 으로 표시만 한다 (아래 runAgent 분기 참고).
 
-export const ACTION_CHAIN: Record<ActionName, ToolName[]> = {
+export type StaticChainAction = Exclude<ActionName, 'free_text'>
+
+export const ACTION_CHAIN: Record<StaticChainAction, ToolName[]> = {
   start_campaign: [
     'generate_announcement',
     'crawl_naver_images',
@@ -65,6 +69,11 @@ export const ACTION_CHAIN: Record<ActionName, ToolName[]> = {
   urgent_alert: ['generate_announcement'],
 }
 
+export const ALL_ACTIONS: readonly ActionName[] = [
+  ...(Object.keys(ACTION_CHAIN) as StaticChainAction[]),
+  'free_text',
+]
+
 // =====================================================
 // runAgent — fire-and-forget entry
 // =====================================================
@@ -76,6 +85,8 @@ export interface RunAgentInput {
   productId?: string | null
   productIds?: string[]
   userId?: string | null
+  /** free_text 액션의 사용자 자연어 입력. Phase D 에서 Claude 에 전달. */
+  message?: string
 }
 
 export interface RunAgentResult {
@@ -83,6 +94,8 @@ export interface RunAgentResult {
   completed: boolean
   failedToolName: ToolName | null
 }
+
+const FREE_TEXT_PLACEHOLDER = 'Phase D에서 활성화됩니다'
 
 export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
   const {
@@ -92,11 +105,42 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     productId = null,
     productIds,
     userId = null,
+    message,
   } = input
 
   const supabase = createServiceClient()
-  const chain = ACTION_CHAIN[action]
 
+  // free_text: 정적 chain 아님 → mock 단일 step + trace 완료.
+  // Phase D 에서 Claude dynamic tool_use loop 로 교체.
+  if (action === 'free_text') {
+    const startedAt = new Date()
+    await persistStep(supabase, {
+      traceId,
+      stepOrder: 1,
+      toolName: 'free_text',
+      status: 'done',
+      input: {
+        storeId,
+        ...(productId ? { productId } : {}),
+        ...(message ? { message } : {}),
+      },
+      output: { message: FREE_TEXT_PLACEHOLDER },
+      summary: FREE_TEXT_PLACEHOLDER,
+      startedAt,
+      completedAt: new Date(),
+      durationMs: 0,
+    })
+    await supabase
+      .from('agent_traces')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', traceId)
+    return { traceId, completed: true, failedToolName: null }
+  }
+
+  const chain = ACTION_CHAIN[action]
   if (!chain) {
     // ActionName 타입으로 막혀 있지만 런타임 방어.
     await markTraceFailed(supabase, traceId, `Unknown action: ${action}`)
@@ -203,7 +247,8 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
 interface PersistStepArgs {
   traceId: string
   stepOrder: number
-  toolName: ToolName
+  /** 'free_text' 는 ToolName 이 아니지만 trace_steps.tool_name 자리 표시자. */
+  toolName: ToolName | 'free_text'
   status: 'done' | 'error'
   input: Record<string, unknown> | null
   output: Record<string, unknown> | null
@@ -247,7 +292,7 @@ async function markTraceFailed(
     .eq('id', traceId)
 }
 
-function stageForAction(action: ActionName): 1 | 2 | 3 {
+function stageForAction(action: StaticChainAction): 1 | 2 | 3 {
   // PRD §7.13: start_campaign → stage 1, urgent_alert → 2, announce_pickup → 3.
   if (action === 'urgent_alert') return 2
   if (action === 'announce_pickup') return 3
