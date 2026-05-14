@@ -71,9 +71,9 @@
 
 ## Phase C — Core Views (C.1-C.4 병렬 가능)
 
-- [ ] **C.1** `ProductRegisterForm.tsx` (`/new` 페이지)
+- [x] **C.1** `ProductRegisterForm.tsx` (`/new` 페이지)
   - 모든 필수 필드 입력
-  - "이미지 자동 가져오기" 버튼 (→ `crawl_naver_images` 호출)
+  - "이미지 자동 가져오기" 버튼 (→ `crawl_naver_images` 호출) — Phase D.5에서 활성화, 현재 placeholder
   - 6장 이미지 그리드, 선택 / 메인 지정
   - 직접 업로드 fallback (Supabase Storage 직접)
   - Submit → `products` insert → "공구 시작" 옵션 토스트
