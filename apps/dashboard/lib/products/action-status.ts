@@ -110,6 +110,9 @@ export interface FeatureState {
   friendlyError?: string
 }
 
+/** Stale running 임계값 (2분). Vercel maxDuration 60s + safety margin. */
+const STALE_RUNNING_MS = 2 * 60 * 1000
+
 /**
  * 7 feature 의 상태를 계산한다 (pure).
  *
@@ -164,6 +167,15 @@ export function computeFeatureStates(input: {
     }
 
     if (latest.status === 'running') {
+      // Stale 판정: 2분 이상 'running' 인 trace 는 Vercel function 강제 종료 등으로
+      // DB update 못 한 채 남은 좀비 trace 로 간주 → idle 로 표시 (실행 버튼 재활성).
+      // 실제 chain 은 maxDuration=60s + tool 5-15s 이므로 2분 이면 안전한 임계값.
+      const startedMs = Date.parse(latest.startedAt)
+      const isStale =
+        Number.isFinite(startedMs) && Date.now() - startedMs > STALE_RUNNING_MS
+      if (isStale) {
+        return { definition, status: 'idle' as const, assetCount: 0 }
+      }
       return { definition, status: 'running' as const, assetCount: 0 }
     }
     if (latest.status === 'failed') {
