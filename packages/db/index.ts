@@ -38,7 +38,7 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['products']['Row'], 
+        Insert: Omit<Database['public']['Tables']['products']['Row'],
           'id' | 'created_at' | 'updated_at' | 'ordered_quantity' | 'flow_stage' | 'status'
         > & {
           id?: string
@@ -47,6 +47,7 @@ export interface Database {
           status?: string
         }
         Update: Partial<Database['public']['Tables']['products']['Row']>
+        Relationships: []
       }
       orders: {
         Row: {
@@ -63,7 +64,7 @@ export interface Database {
           picked_up_at: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['orders']['Row'], 
+        Insert: Omit<Database['public']['Tables']['orders']['Row'],
           'id' | 'created_at' | 'anomaly_detected' | 'status'
         > & {
           id?: string
@@ -71,11 +72,14 @@ export interface Database {
           anomaly_detected?: boolean
         }
         Update: Partial<Database['public']['Tables']['orders']['Row']>
+        Relationships: []
       }
       agent_traces: {
         Row: {
           id: string
+          store_id: string
           product_id: string | null
+          user_id: string | null
           action: string
           status: string
           summary: string | null
@@ -83,13 +87,20 @@ export interface Database {
           started_at: string
           completed_at: string | null
         }
-        Insert: Omit<Database['public']['Tables']['agent_traces']['Row'], 
-          'id' | 'started_at' | 'status'
-        > & { 
+        Insert: {
           id?: string
-          status?: string 
+          store_id: string
+          product_id?: string | null
+          user_id?: string | null
+          action: string
+          status?: string
+          summary?: string | null
+          error_message?: string | null
+          started_at?: string
+          completed_at?: string | null
         }
         Update: Partial<Database['public']['Tables']['agent_traces']['Row']>
+        Relationships: []
       }
       trace_steps: {
         Row: {
@@ -107,6 +118,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['trace_steps']['Row'], 'id'> & { id?: string }
         Update: Partial<Database['public']['Tables']['trace_steps']['Row']>
+        Relationships: []
       }
       generated_assets: {
         Row: {
@@ -122,12 +134,15 @@ export interface Database {
           used_at: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['generated_assets']['Row'], 
+        Insert: Omit<Database['public']['Tables']['generated_assets']['Row'],
           'id' | 'created_at'
         > & { id?: string }
         Update: Partial<Database['public']['Tables']['generated_assets']['Row']>
+        Relationships: []
       }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
   }
 }
 

@@ -7,7 +7,9 @@
  *
  * 워커 단위 확장:
  *  - B1 (auth backbone) → stores, store_members
- *  - C1 (상품 등록) → products에 store_id / primary_image_url / archived_at / pickup_deadline 컬럼 추가
+ *  - C1 (상품 등록) → products (store_id / primary_image_url / archived_at 컬럼 추가)
+ *  - C2/C3 (ChatView + SavedFlows) → saved_flows
+ *  - C5 (Agent API) → agent_traces (store_id / user_id 동기화 + Relationships)
  */
 
 import type { Database as BaseDatabase } from '@onword/db'
@@ -49,6 +51,24 @@ interface SavedFlowRow {
   updated_at: string
 }
 
+/**
+ * agent_traces — packages/db 의 BaseDatabase 정의에 0002 migration 의
+ * store_id / user_id 컬럼이 누락되어 있어 dashboard local 에서 확장한다.
+ * (Phase D 에서 packages/db 정리 시 통합 예정.)
+ */
+interface AgentTraceRow {
+  id: string
+  store_id: string
+  product_id: string | null
+  user_id: string | null
+  action: string
+  status: string
+  summary: string | null
+  error_message: string | null
+  started_at: string
+  completed_at: string | null
+}
+
 type BaseProductRow = BaseDatabase['public']['Tables']['products']['Row']
 type ProductRow = BaseProductRow & {
   store_id: string
@@ -62,7 +82,7 @@ type ProductInsert = Omit<ProductRow, 'id' | 'created_at' | 'updated_at' | 'orde
   updated_at?: string
 }
 
-type OverriddenTables = Omit<BaseDatabase['public']['Tables'], 'products'> & {
+type OverriddenTables = Omit<BaseDatabase['public']['Tables'], 'products' | 'agent_traces'> & {
   stores: {
     Row: StoreRow
     Insert: Partial<StoreRow> & {
@@ -70,11 +90,13 @@ type OverriddenTables = Omit<BaseDatabase['public']['Tables'], 'products'> & {
       owner_id: string
     }
     Update: Partial<StoreRow>
+    Relationships: []
   }
   store_members: {
     Row: StoreMemberRow
     Insert: StoreMemberRow
     Update: Partial<StoreMemberRow>
+    Relationships: []
   }
   products: {
     Row: ProductRow
@@ -109,6 +131,23 @@ type OverriddenTables = Omit<BaseDatabase['public']['Tables'], 'products'> & {
       created_at?: string
       updated_at?: string
     }
+  }
+  agent_traces: {
+    Row: AgentTraceRow
+    Insert: {
+      id?: string
+      store_id: string
+      product_id?: string | null
+      user_id?: string | null
+      action: string
+      status?: string
+      summary?: string | null
+      error_message?: string | null
+      started_at?: string
+      completed_at?: string | null
+    }
+    Update: Partial<AgentTraceRow>
+    Relationships: []
   }
 }
 
