@@ -33,6 +33,22 @@ Vercel 대시보드에서:
 | `CRON_SECRET` | random 32+ 자 | random 32+ 자 (별개) | Vercel Cron 인증 |
 | `NEXT_PUBLIC_APP_URL` | dev URL | prod URL | 메타데이터 |
 
+### Vercel 등록 시 dummy 값 (사용 안 하는 경우)
+
+도매주문 (Resend 이메일) UI 가 숨김 처리된 상태에서는 다음 변수에 dummy 입력 OK:
+
+| Key | Dummy 값 |
+|---|---|
+| `RESEND_API_KEY` | `re_unused_placeholder` |
+| `WHOLESALE_DEFAULT_RECIPIENT` | `noreply@example.com` |
+| `NEXT_PUBLIC_APP_URL` | `https://onword-dashboard.vercel.app` (첫 deploy 후 실제 URL 로 교체) |
+
+이유: 코드는 도매주문 액션 실행 시점에만 RESEND_API_KEY 를 읽음. UI 에서 숨겨놨으니 호출 안 됨.
+NEXT_PUBLIC_APP_URL 은 메타데이터/이메일 absolute URL 용도 — 도매주문 미사용 한 영향 없음.
+
+**첫 deploy 후 액션:** Vercel 이 실제 URL 배정 (예: `https://onword-dashboard-abc123.vercel.app`) →
+Settings > Environment Variables 에서 `NEXT_PUBLIC_APP_URL` 값을 교체 → "Redeploy" 트리거.
+
 **`CRON_SECRET` 생성 예시:**
 ```bash
 openssl rand -hex 32
