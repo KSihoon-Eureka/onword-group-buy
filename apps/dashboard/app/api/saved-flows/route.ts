@@ -107,16 +107,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_input', reason: parsed.error }, { status: 400 })
   }
 
+  // `as never` cast: @supabase/ssr 0.5.2 + supabase-js 2.105 typing 호환성 이슈로
+  // ssr 의 createServerClient<Database> 가 insert/update payload 를 `never[]` 로 추론.
+  // service-role 우회는 인증/멤버십 사전 검증 흐름과 어울리지 않아 ssr 클라이언트 유지.
+  // 동일 패턴: apps/dashboard/app/api/products/route.ts 주석 참조.
+  const insertPayload = {
+    store_id: storeId,
+    user_id: user.id,
+    name: parsed.value.name,
+    prompt: parsed.value.prompt,
+    icon: parsed.value.icon ?? null,
+    display_order: parsed.value.displayOrder ?? 0,
+  }
   const { data, error } = await supabase
     .from('saved_flows')
-    .insert({
-      store_id: storeId,
-      user_id: user.id,
-      name: parsed.value.name,
-      prompt: parsed.value.prompt,
-      icon: parsed.value.icon ?? null,
-      display_order: parsed.value.displayOrder ?? 0,
-    })
+    .insert(insertPayload as never)
     .select(
       'id, store_id, user_id, name, prompt, icon, display_order, run_count, last_run_at, created_at, updated_at',
     )

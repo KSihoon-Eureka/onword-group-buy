@@ -9,8 +9,8 @@
  *  4. products 조회로 entityId → 상품명 매핑 (UI 가독성).
  *  5. AuditPageClient (client wrapper) 에 전달 — filter 변경 시 URL 갱신.
  *
- * audit_log 테이블은 dashboard local Database 타입에 아직 추가 안 됨 (Phase D 통합 예정,
- * database.types.ts 주석 참조). 쿼리는 `as never` cast 패턴 따른다 (api/products/route.ts).
+ * Phase D: packages/db Database 가 audit_log / phone_access_log 포함하도록 통합.
+ * 더 이상 untyped 캐스트 불필요 — 직접 from('audit_log') 사용.
  */
 
 import { redirect } from 'next/navigation'
@@ -87,12 +87,9 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
   const supabase = getServerSupabase()
 
   // audit_log fetch — store_id + 선택적 entity 필터, 시간 역순 limit 100.
-  // Database 타입에 audit_log 미포함이라 untyped from() 캐스트 사용.
-  type LooseDb = { from: (t: string) => unknown }
-  const looseSupabase = supabase as unknown as LooseDb
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = (looseSupabase.from('audit_log') as any)
+  // Phase D 부터 Database 타입에 audit_log 포함되어 직접 from() 가능.
+  let query = supabase
+    .from('audit_log')
     .select(
       'id, store_id, user_id, entity_type, entity_id, action, changes, created_at',
     )
@@ -103,10 +100,9 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
   if (filter.entityType) query = query.eq('entity_type', filter.entityType)
   if (filter.entityId) query = query.eq('entity_id', filter.entityId)
 
-  const { data: auditRows, error: auditErr } = (await query) as {
-    data: AuditLogRow[] | null
-    error: { message: string } | null
-  }
+  const { data: auditRows, error: auditErr } = await query.returns<
+    AuditLogRow[]
+  >()
 
   if (auditErr) {
     console.error('[/audit] audit_log fetch failed:', auditErr)
@@ -125,8 +121,7 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
 
   const entityLabelMap: Record<string, string> = {}
   if (productIds.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: productRows } = await (supabase as any)
+    const { data: productRows } = await supabase
       .from('products')
       .select('id, name')
       .in('id', productIds)

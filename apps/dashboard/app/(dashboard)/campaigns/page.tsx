@@ -105,17 +105,18 @@ export default async function CampaignsPage({ searchParams }: PageProps) {
 
   const supabase = getServerSupabase()
   // RLS가 store_members 멤버십을 강제하지만, store_id 명시로 cross-store 누수 이중 차단.
-  // `as never` cast 이유: api/products/route.ts 주석 참조 (packages/db Database 타입 mismatch, Phase D 정리 예정).
+  // Phase D 부터 packages/db Database 가 products store_id/archived_at 컬럼 포함 →
+  // SELECT 경로는 cast 불필요.
   let query = supabase
     .from('products')
     .select('*')
-    .eq('store_id' as never, active.storeId as never)
-    .order('order_deadline' as never, { ascending: false })
+    .eq('store_id', active.storeId)
+    .order('order_deadline', { ascending: false })
 
   if (filter === 'active') {
-    query = query.is('archived_at' as never, null)
+    query = query.is('archived_at', null)
   } else if (filter === 'archived') {
-    query = query.not('archived_at' as never, 'is', null)
+    query = query.not('archived_at', 'is', null)
   }
   // filter === 'all' → 필터 없음
 

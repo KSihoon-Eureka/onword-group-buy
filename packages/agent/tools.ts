@@ -12,6 +12,8 @@ export {
   TOOL_NAMES,
   TOOL_SCHEMAS,
   PHASE_D_PLACEHOLDER,
+  mockHandler,
+  makeHandler,
   type ToolContext,
   type ToolHandler,
 } from './tools/index'

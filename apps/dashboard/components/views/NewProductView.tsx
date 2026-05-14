@@ -30,7 +30,7 @@ interface NewProductViewProps {
   onNavigate: (tab: DashboardTab) => void
 }
 
-export function NewProductView({ onNavigate }: NewProductViewProps) {
+export function NewProductView(_props: NewProductViewProps) {
   return (
     <div className="h-full p-6 max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold text-zinc-900 tracking-tight mb-2">상품 등록</h2>

@@ -23,7 +23,7 @@ interface AssetsViewProps {
   onNavigate: (tab: DashboardTab) => void
 }
 
-export function AssetsView({ onNavigate }: AssetsViewProps) {
+export function AssetsView(_props: AssetsViewProps) {
   return (
     <div className="h-full p-6">
       <h2 className="text-2xl font-bold text-zinc-900 tracking-tight mb-6">자산</h2>
