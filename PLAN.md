@@ -101,20 +101,10 @@
 
 각 tool은 독립. 한 워커가 하나씩.
 
-- [ ] **D.1** `generate_announcement` (Stage 1)
-  - Claude API + `AI_DOCS/kakao-text-format.md` §1 템플릿
-  - store config (leading_emoji, brand_name) 주입
-  - TDD: 슈미트 베개커버 fixture 통과
-- [ ] **D.2** `generate_announcement` (Stage 2 마감 임박)
-  - 단일 / 다중 상품 지원
-  - 형식 §2
-- [ ] **D.3** `generate_announcement` (Stage 3 수령 안내)
-  - 형식 §3
-  - 빈 결과 처리
-- [ ] **D.4** `generate_price_emphasis_text` (NEW)
-  - 100자 이내
-  - 형식 §4
-  - naverPrice 미존재 / 역전 시 에러
+- [x] **D.1** `generate_announcement` (Stage 1) — Wave 1 (Agent A, 16 tests). registry wiring은 Phase D 전체 후.
+- [x] **D.2** `generate_announcement` (Stage 2 마감 임박) — Wave 1 (Agent A, 단일/다중 분기 포함)
+- [x] **D.3** `generate_announcement` (Stage 3 수령 안내) — Wave 1 (Agent A, 빈 결과 throw + KST 날짜)
+- [x] **D.4** `generate_price_emphasis_text` — Wave 1 (Agent B, 12 tests). PRD §8.4 결정적 템플릿 — Anthropic 미사용.
 - [ ] **D.5** `crawl_naver_images` (NEW — multi-image)
   - `AI_DOCS/image-crawl.md` 참조
   - max 6 images, 분류 (product/detail/lifestyle)
@@ -131,8 +121,7 @@
   - SVG → Sharp 렌더링
   - `AI_DOCS/pickup-table-design.md` 참조
   - 동반 카톡 텍스트도 생성
-- [ ] **D.9** `get_orders` + db helpers
-  - anomaly detection (rules in `AI_DOCS/anomaly-rules.md` — 추후 작성)
+- [x] **D.9** `get_orders` + db helpers — Wave 1 (Agent C, 20 tests). PIPA phone 마스킹 + phone_access_log + anomaly v1.
 - [ ] **D.10** `notify_wholesaler`
   - Resend API
   - customer_phone 절대 제외 (PIPA)
