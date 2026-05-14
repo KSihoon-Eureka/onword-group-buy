@@ -40,6 +40,10 @@
 
 대시보드 사용법 1페이지. 로그인 → 상품 등록 → 공구 시작 → 카톡 paste → 픽업.
 
+### 배포 → `DEPLOY.md`
+
+Vercel + Cloudflare Turnstile + Supabase 마이그레이션 + Cron 등록 단계.
+
 ### 코파운더로 처음 합류한 경우 → `ONBOARDING.md`
 
 이 파일은 Claude Code 세션이 *읽고 따라할 수 있도록* AI 친화적 형식으로 작성됐다.
