@@ -110,10 +110,7 @@
 - [x] **D.7** `compose_poster` — Wave 2 (Agent E, 17 tests). 800×950 PNG + store 색상. Pretendard 폰트 F.6 시각 검증으로 위임 (옵션 3).
 - [x] **D.8** `generate_pickup_table` — Wave 2 (Agent E, 15 tests). PRD §13 100% + 동반 카톡 텍스트.
 - [x] **D.9** `get_orders` + db helpers — Wave 1 (Agent C, 20 tests). PIPA phone 마스킹 + phone_access_log + anomaly v1.
-- [ ] **D.10** `notify_wholesaler`
-  - Resend API
-  - customer_phone 절대 제외 (PIPA)
-  - phone_access_log 'export' 기록
+- [x] **D.10** `notify_wholesaler` — Wave 3 (Agent F, 27 tests). 컴파일 타임 PIPA 차단 (`buildWholesaleEmail` 시그니처에 phone/name 인자 없음). Resend SDK mock. phone_access_log 'export' INSERT. flow_stage='warehouse_notified' update.
 
 ---
 
