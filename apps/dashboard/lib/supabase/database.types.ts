@@ -82,7 +82,23 @@ type ProductInsert = Omit<ProductRow, 'id' | 'created_at' | 'updated_at' | 'orde
   updated_at?: string
 }
 
-type OverriddenTables = Omit<BaseDatabase['public']['Tables'], 'products' | 'agent_traces'> & {
+/**
+ * generated_assets — packages/db 의 BaseDatabase 정의에 0002/0004 migration 의
+ * store_id / superseded_at / superseded_by 컬럼이 누락되어 있어 dashboard
+ * local 에서 확장한다. (Phase D 에서 packages/db 정리 시 통합 예정.)
+ */
+type BaseGeneratedAssetRow =
+  BaseDatabase['public']['Tables']['generated_assets']['Row']
+type GeneratedAssetRow = BaseGeneratedAssetRow & {
+  store_id: string
+  superseded_at: string | null
+  superseded_by: string | null
+}
+
+type OverriddenTables = Omit<
+  BaseDatabase['public']['Tables'],
+  'products' | 'agent_traces' | 'generated_assets'
+> & {
   stores: {
     Row: StoreRow
     Insert: Partial<StoreRow> & {
@@ -147,6 +163,15 @@ type OverriddenTables = Omit<BaseDatabase['public']['Tables'], 'products' | 'age
       completed_at?: string | null
     }
     Update: Partial<AgentTraceRow>
+    Relationships: []
+  }
+  generated_assets: {
+    Row: GeneratedAssetRow
+    Insert: Omit<GeneratedAssetRow, 'id' | 'created_at'> & {
+      id?: string
+      created_at?: string
+    }
+    Update: Partial<GeneratedAssetRow>
     Relationships: []
   }
 }
