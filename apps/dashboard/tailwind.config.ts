@@ -4,8 +4,9 @@ const config: Config = {
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
-    // workspace packages도 스캔
-    '../../packages/ui/**/*.{js,ts,jsx,tsx}',
+    // workspace packages 스캔 — root level only (node_modules 회피).
+    // packages/ui 내부 .tsx 는 모두 root 에 있어서 ** 불필요.
+    '../../packages/ui/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {

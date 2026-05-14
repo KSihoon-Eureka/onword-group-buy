@@ -21,9 +21,20 @@ const MAX_BYTES = 10 * 1024 * 1024 // 10MB (PRD §11.1 — 일반 상품 이미�
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 
 function sanitizeFilename(name: string): string {
-  // 슬래시 / 컨트롤 문자 제거 + 한글 등 비ASCII는 그대로 (Supabase Storage 허용)
-  const cleaned = name.replace(/[\\/\x00-\x1f]/g, '_').trim()
-  return cleaned.length > 0 ? cleaned : 'upload'
+  // Supabase Storage key 제약: ASCII 영숫자 + .-_ 만 안전.
+  // 공백/한글/특수문자는 'Invalid key' 에러 발생 → 모두 _ 로 치환.
+  // 확장자는 보존하고 base 만 sanitize.
+  const lastDot = name.lastIndexOf('.')
+  const base = lastDot > 0 ? name.slice(0, lastDot) : name
+  const ext = lastDot > 0 ? name.slice(lastDot) : ''
+  const cleanedBase = base
+    .normalize('NFKD')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  const cleanedExt = ext.replace(/[^a-zA-Z0-9.]/g, '')
+  const result = cleanedBase + cleanedExt
+  return result.length > 0 ? result : 'upload'
 }
 
 export async function POST(request: Request) {

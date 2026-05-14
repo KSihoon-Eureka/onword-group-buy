@@ -73,8 +73,11 @@ export function getCategoryLabel(category: AssetCategory): string {
 export function truncatePreview(content: string | null, maxLength = 100): string {
   if (!content) return ''
   const trimmed = content.trim()
-  if (trimmed.length <= maxLength) return trimmed
-  return `${trimmed.slice(0, maxLength)}…`
+  // string.slice 는 UTF-16 code unit 기준. emoji (surrogate pair) 중간을 자르면
+  // broken char (�) 생성 → server/client hydration mismatch. Array.from 으로 code point 단위.
+  const codepoints = Array.from(trimmed)
+  if (codepoints.length <= maxLength) return trimmed
+  return `${codepoints.slice(0, maxLength).join('')}…`
 }
 
 const WEEKDAYS_KR = ['일', '월', '화', '수', '목', '금', '토'] as const
